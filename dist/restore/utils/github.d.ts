@@ -1,2 +1,2 @@
-export declare function getJobStatus(): Promise<string>;
+export declare function getJobStatus(githubToken: string): Promise<string>;
 //# sourceMappingURL=github.d.ts.map

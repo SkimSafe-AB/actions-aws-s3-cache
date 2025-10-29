@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import { getJobStatus } from '../utils/github';
 
 // Mock modules first
 jest.mock('fs', () => ({
@@ -15,6 +16,7 @@ jest.mock('fs', () => ({
 jest.mock('@actions/core');
 jest.mock('@actions/exec');
 jest.mock('@actions/io');
+jest.mock('../utils/github');
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-s3', () => ({
@@ -36,6 +38,7 @@ describe('Full Action Integration Tests', () => {
   const mockInfo = core.info as jest.MockedFunction<typeof core.info>;
   const mockGetInput = core.getInput as jest.MockedFunction<typeof core.getInput>;
   const mockGetBooleanInput = core.getBooleanInput as jest.MockedFunction<typeof core.getBooleanInput>;
+  const mockGetJobStatus = getJobStatus as jest.MockedFunction<typeof getJobStatus>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,6 +53,9 @@ describe('Full Action Integration Tests', () => {
     // Set required GitHub environment variables
     process.env.GITHUB_REPOSITORY = 'test-owner/test-repo';
     process.env.GITHUB_REF_NAME = 'main';
+
+    // Mock getJobStatus
+    mockGetJobStatus.mockResolvedValue('success');
   });
 
   describe('Restore Action Integration', () => {
@@ -138,7 +144,8 @@ describe('Full Action Integration Tests', () => {
         INPUT_S3_PREFIX: 'github-actions-cache',
         INPUT_COMPRESSION_LEVEL: '6',
         INPUT_COMPRESSION_METHOD: 'gzip',
-        INPUT_FAIL_ON_CACHE_MISS: 'false'
+        INPUT_FAIL_ON_CACHE_MISS: 'false',
+        INPUT_GITHUB_TOKEN: 'test-token'
       };
 
       Object.entries(environment).forEach(([key, value]) => {
@@ -169,6 +176,52 @@ describe('Full Action Integration Tests', () => {
 
       // Verify that core functions were called
       expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Save phase starting');
+    });
+
+    it('should skip save if job fails', async () => {
+      mockGetJobStatus.mockResolvedValue('failure');
+
+      const environment = {
+        INPUT_KEY: 'test-cache-key',
+        INPUT_PATH: 'node_modules\n.cache',
+        INPUT_AWS_ACCESS_KEY_ID: 'AKIAIOSFODNN7EXAMPLE',
+        INPUT_AWS_SECRET_ACCESS_KEY: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+        INPUT_AWS_REGION: 'us-east-1',
+        INPUT_S3_BUCKET: 'test-bucket',
+        INPUT_S3_PREFIX: 'github-actions-cache',
+        INPUT_COMPRESSION_LEVEL: '6',
+        INPUT_COMPRESSION_METHOD: 'gzip',
+        INPUT_FAIL_ON_CACHE_MISS: 'false',
+        INPUT_GITHUB_TOKEN: 'test-token'
+      };
+
+      Object.entries(environment).forEach(([key, value]) => {
+        process.env[key] = value;
+      });
+
+      mockGetInput.mockImplementation((name: string, options?: any) => {
+        const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
+        const value = process.env[envName] || '';
+
+        if (options?.required && !value.trim()) {
+          throw new Error(`Input required and not supplied: ${name}`);
+        }
+
+        return options?.trimWhitespace ? value.trim() : value;
+      });
+
+      mockGetBooleanInput.mockImplementation((name: string) => {
+        const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
+        return process.env[envName] === 'true';
+      });
+
+      const { run: runSave } = await import('../save');
+      await runSave();
+
+      expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Save phase starting');
+      expect(mockInfo).toHaveBeenCalledWith('Job status is \'failure\', skipping cache save.');
+      expect(mockInfo).not.toHaveBeenCalledWith('DEBUG Config: key=present');
+      expect(mockInfo).not.toHaveBeenCalledWith('DEBUG Config: paths=node_modules,.cache');
     });
   });
 

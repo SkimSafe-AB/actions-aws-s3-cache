@@ -1,1 +1,1 @@
-{"version":3,"file":"github.d.ts","sourceRoot":"","sources":["file:///Users/philipmannheimer/Documents/codesmile/clients/skimsafe/runner-s3-cache/s3-cache/src/utils/github.ts"],"names":[],"mappings":"AAIA,wBAAsB,YAAY,IAAI,OAAO,CAAC,MAAM,CAAC,CAkDpD"}
+{"version":3,"file":"github.d.ts","sourceRoot":"","sources":["file:///Users/philipmannheimer/Documents/codesmile/clients/skimsafe/runner-s3-cache/s3-cache/src/utils/github.ts"],"names":[],"mappings":"AAIA,wBAAsB,YAAY,CAAC,WAAW,EAAE,MAAM,GAAG,OAAO,CAAC,MAAM,CAAC,CAkDvE"}

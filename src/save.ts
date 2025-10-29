@@ -18,9 +18,11 @@ export async function run(): Promise<void> {
     }
 
     core.info('S3 Cache Action - Save phase starting');
-    core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
 
-    const jobStatus = await getJobStatus();
+    // Get minimal inputs needed for job status check
+    const githubToken = core.getInput('github-token', { trimWhitespace: true });
+
+    const jobStatus = await getJobStatus(githubToken);
     if (jobStatus !== 'success') {
       core.info(`Job status is '${jobStatus}', skipping cache save.`);
       return;

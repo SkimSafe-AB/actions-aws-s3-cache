@@ -56,6 +56,7 @@ describe('Save Action', () => {
         case 's3-prefix': return 'github-actions-cache';
         case 'compression-level': return '6';
         case 'compression-method': return 'gzip';
+        case 'github-token': return 'test-token';
         default: return '';
       }
     });

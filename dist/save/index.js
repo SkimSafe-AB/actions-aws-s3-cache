@@ -59883,7 +59883,8 @@ class Config {
             s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
             compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
             compressionMethod: core.getInput('compression-method', { trimWhitespace: true }) || 'gzip',
-            failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
+            failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss'),
+            githubToken: core.getInput('github-token', { trimWhitespace: true })
         };
         // Get GitHub context
         this.githubContext = {
@@ -60004,8 +60005,9 @@ async function run() {
             return;
         }
         core.info('S3 Cache Action - Save phase starting');
-        core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
-        const jobStatus = await (0, github_1.getJobStatus)();
+        // Get minimal inputs needed for job status check
+        const githubToken = core.getInput('github-token', { trimWhitespace: true });
+        const jobStatus = await (0, github_1.getJobStatus)(githubToken);
         if (jobStatus !== 'success') {
             core.info(`Job status is '${jobStatus}', skipping cache save.`);
             return;
@@ -60389,14 +60391,14 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getJobStatus = getJobStatus;
 const core = __importStar(__nccwpck_require__(6966));
-async function getJobStatus() {
-    const token = process.env.ACTIONS_RUNTIME_TOKEN;
+async function getJobStatus(githubToken) {
+    const token = githubToken;
     const githubApiUrl = process.env.GITHUB_API_URL;
     const jobName = process.env.GITHUB_JOB;
     const runId = process.env.GITHUB_RUN_ID;
     const repository = process.env.GITHUB_REPOSITORY;
     if (!token || !githubApiUrl || !jobName || !runId || !repository) {
-        core.warning('Missing GitHub Actions environment variables to determine job status. Assuming success.');
+        core.warning('Missing GitHub Actions environment variables or token to determine job status. Assuming success.');
         return 'success';
     }
     const [owner, repo] = repository.split('/');

@@ -15,6 +15,7 @@ class Config {
     compressionLevel: string;
     compressionMethod: string;
     failOnCacheMiss: boolean;
+    githubToken: string;
   };
 
   public githubContext: {
@@ -43,7 +44,8 @@ class Config {
       s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
       compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
       compressionMethod: core.getInput('compression-method', { trimWhitespace: true }) || 'gzip',
-      failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
+      failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss'),
+      githubToken: core.getInput('github-token', { trimWhitespace: true })
     };
 
     // Get GitHub context

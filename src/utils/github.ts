@@ -2,15 +2,15 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { CacheError } from '../types';
 
-export async function getJobStatus(): Promise<string> {
-  const token = process.env.ACTIONS_RUNTIME_TOKEN;
+export async function getJobStatus(githubToken: string): Promise<string> {
+  const token = githubToken;
   const githubApiUrl = process.env.GITHUB_API_URL;
   const jobName = process.env.GITHUB_JOB;
   const runId = process.env.GITHUB_RUN_ID;
   const repository = process.env.GITHUB_REPOSITORY;
 
   if (!token || !githubApiUrl || !jobName || !runId || !repository) {
-    core.warning('Missing GitHub Actions environment variables to determine job status. Assuming success.');
+    core.warning('Missing GitHub Actions environment variables or token to determine job status. Assuming success.');
     return 'success';
   }
 

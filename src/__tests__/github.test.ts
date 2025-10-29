@@ -31,9 +31,9 @@ describe('getJobStatus', () => {
     process.env.GITHUB_RUN_ID = '';
     process.env.GITHUB_REPOSITORY = '';
 
-    const status = await getJobStatus();
+    const status = await getJobStatus('');
     expect(status).toBe('success');
-    expect(core.warning).toHaveBeenCalledWith('Missing GitHub Actions environment variables to determine job status. Assuming success.');
+    expect(core.warning).toHaveBeenCalledWith('Missing GitHub Actions environment variables or token to determine job status. Assuming success.');
   });
 
   it('should return job status from GitHub API', async () => {
@@ -47,7 +47,7 @@ describe('getJobStatus', () => {
       }),
     });
 
-    const status = await getJobStatus();
+    const status = await getJobStatus('test-token');
     expect(status).toBe('failure');
     expect(mockFetch).toHaveBeenCalledWith(
       'https://api.github.com/repos/test-owner/test-repo/actions/runs/12345/jobs',
@@ -68,7 +68,7 @@ describe('getJobStatus', () => {
       statusText: 'Not Found',
     });
 
-    const status = await getJobStatus();
+    const status = await getJobStatus('test-token');
     expect(status).toBe('success');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Failed to query GitHub API for job status'));
   });
@@ -83,7 +83,7 @@ describe('getJobStatus', () => {
       }),
     });
 
-    const status = await getJobStatus();
+    const status = await getJobStatus('test-token');
     expect(status).toBe('success');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Could not find current job'));
   });
@@ -91,7 +91,7 @@ describe('getJobStatus', () => {
   it('should return "success" if an error occurs during API call', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    const status = await getJobStatus();
+    const status = await getJobStatus('test-token');
     expect(status).toBe('success');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Error querying GitHub API for job status'));
   });
