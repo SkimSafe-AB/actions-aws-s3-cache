@@ -59993,6 +59993,12 @@ const types_1 = __nccwpck_require__(3244);
  */
 async function run() {
     try {
+        // Check if cache was already restored
+        const cacheHit = core.getState('cache-hit');
+        if (cacheHit === 'true') {
+            core.info('Cache was restored successfully, skipping save.');
+            return;
+        }
         core.info('S3 Cache Action - Save phase starting');
         const config = new config_1.default();
         core.info(`Saving cache with key: ${config.input.key}`);

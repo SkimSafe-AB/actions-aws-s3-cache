@@ -86,6 +86,7 @@ async function restoreCache(s3Client: S3CacheClient, s3Key: string, matchedKey: 
 
     // Set outputs
     CacheUtils.setOutputs(true, config.input.key, matchedKey);
+    core.saveState('cache-hit', 'true');
 
     core.info('Cache restored successfully');
 

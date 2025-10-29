@@ -9,6 +9,13 @@ import { CacheError, S3Error, S3CacheMetadata } from './types';
  */
 export async function run(): Promise<void> {
   try {
+    // Check if cache was already restored
+    const cacheHit = core.getState('cache-hit');
+    if (cacheHit === 'true') {
+      core.info('Cache was restored successfully, skipping save.');
+      return;
+    }
+
     core.info('S3 Cache Action - Save phase starting');
 
     const config = new Config();

@@ -60055,6 +60055,7 @@ async function restoreCache(s3Client, s3Key, matchedKey, config) {
         await cache_1.CacheUtils.extractArchive(archivePath);
         // Set outputs
         cache_1.CacheUtils.setOutputs(true, config.input.key, matchedKey);
+        core.saveState('cache-hit', 'true');
         core.info('Cache restored successfully');
     }
     finally {
