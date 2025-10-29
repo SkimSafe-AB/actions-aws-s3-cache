@@ -69,7 +69,7 @@ const property_provider_1 = __webpack_require__(4124);
 const promises_1 = tslib_1.__importDefault(__webpack_require__(1943));
 const checkUrl_1 = __webpack_require__(4459);
 const requestHelpers_1 = __webpack_require__(2991);
-const retry_wrapper_1 = __webpack_require__(3334);
+const retry_wrapper_1 = __webpack_require__(953);
 const AWS_CONTAINER_CREDENTIALS_RELATIVE_URI = "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI";
 const DEFAULT_LINK_LOCAL_HOST = "http://169.254.170.2";
 const AWS_CONTAINER_CREDENTIALS_FULL_URI = "AWS_CONTAINER_CREDENTIALS_FULL_URI";
@@ -193,7 +193,7 @@ async function getCredentials(response, logger) {
 
 /***/ }),
 
-/***/ 3334:
+/***/ 953:
 /***/ ((__unused_webpack_module, exports) => {
 
 

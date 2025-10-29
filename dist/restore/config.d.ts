@@ -11,7 +11,6 @@ declare class Config {
         compressionLevel: string;
         compressionMethod: string;
         failOnCacheMiss: boolean;
-        githubToken: string;
     };
     githubContext: {
         owner: string;

@@ -44,10 +44,6 @@ inputs:
     description: 'Fail the workflow if cache is not found'
     required: false
     default: 'false'
-  github-token:
-    description: 'GitHub token for API calls'
-    required: false
-    default: ''
 
 outputs:
   cache-hit:
@@ -61,6 +57,7 @@ runs:
   using: 'node20'
   main: 'dist/restore/index.js'
   post: 'dist/save/index.js'
+  post-if: 'success()'
 
 branding:
   icon: 'archive'

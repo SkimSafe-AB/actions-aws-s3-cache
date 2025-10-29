@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-10-29
+
+### Fixed
+- **Job Status Detection**: Fixed cache saving on failed jobs by improving job status detection
+- **GitHub API Response**: Corrected API response parsing to use `jobs` array instead of `value`
+- **Process Exit Code**: Added `process.exitCode` check as primary failure detection method
+- **Conservative Fallback**: Changed fallback behavior from "success" to "unknown" to prevent cache saving when status cannot be determined
+- **Action Definition**: Fixed `action.yml` file to remove `${{ github.token }}` example from description that was causing parsing errors
+
+### Changed
+- Job status detection now returns "unknown" instead of "success" when status cannot be determined
+- Added `ACTIONS_RUNTIME_TOKEN` as fallback token source for GitHub API calls
+- Updated GitHub API headers to use standard v3 format
+- Enhanced error handling with more descriptive warnings
+
+### Technical Details
+- Updated `getJobStatus()` function in `src/utils/github.ts`
+- Fixed duplicate Config instantiation in `src/save.ts`
+- Added comprehensive tests for new job status detection logic
+- Updated all test expectations to handle "unknown" status properly
+
 ## [1.0.0] - 2024-10-29
 
 ### Added

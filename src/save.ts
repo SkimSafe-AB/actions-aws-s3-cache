@@ -3,7 +3,6 @@ import Config from './config';
 import { S3CacheClient } from './utils/s3';
 import { CacheUtils } from './utils/cache';
 import { CacheError, S3Error, S3CacheMetadata } from './types';
-import { getJobStatus } from './utils/github';
 
 /**
  * Main save function
@@ -18,15 +17,6 @@ export async function run(): Promise<void> {
     }
 
     core.info('S3 Cache Action - Save phase starting');
-
-    // Get minimal inputs needed for job status check
-    const githubToken = core.getInput('github-token', { trimWhitespace: true });
-
-    const jobStatus = await getJobStatus(githubToken);
-    if (jobStatus !== 'success') {
-      core.info(`Job status is '${jobStatus}', skipping cache save.`);
-      return;
-    }
 
     const config = new Config();
     core.info(`Saving cache with key: ${config.input.key}`);

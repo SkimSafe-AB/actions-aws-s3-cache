@@ -9,7 +9,7 @@ export async function getJobStatus(githubToken: string): Promise<string> {
     return 'failure';
   }
 
-  const token = githubToken || process.env.ACTIONS_RUNTIME_TOKEN;
+  const token = githubToken || process.env.ACTIONS_RUNTIME_TOKEN || process.env.GITHUB_TOKEN;
   const githubApiUrl = process.env.GITHUB_API_URL;
   const jobName = process.env.GITHUB_JOB;
   const runId = process.env.GITHUB_RUN_ID;

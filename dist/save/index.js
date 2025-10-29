@@ -59883,8 +59883,7 @@ class Config {
             s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
             compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
             compressionMethod: core.getInput('compression-method', { trimWhitespace: true }) || 'gzip',
-            failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss'),
-            githubToken: core.getInput('github-token', { trimWhitespace: true })
+            failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
         };
         // Get GitHub context
         this.githubContext = {
@@ -59992,7 +59991,6 @@ const config_1 = __importDefault(__nccwpck_require__(6878));
 const s3_1 = __nccwpck_require__(7264);
 const cache_1 = __nccwpck_require__(2078);
 const types_1 = __nccwpck_require__(3244);
-const github_1 = __nccwpck_require__(953);
 /**
  * Main save function
  */
@@ -60005,13 +60003,6 @@ async function run() {
             return;
         }
         core.info('S3 Cache Action - Save phase starting');
-        // Get minimal inputs needed for job status check
-        const githubToken = core.getInput('github-token', { trimWhitespace: true });
-        const jobStatus = await (0, github_1.getJobStatus)(githubToken);
-        if (jobStatus !== 'success') {
-            core.info(`Job status is '${jobStatus}', skipping cache save.`);
-            return;
-        }
         const config = new config_1.default();
         core.info(`Saving cache with key: ${config.input.key}`);
         // Validate that paths exist
@@ -60346,98 +60337,6 @@ class CacheUtils {
     }
 }
 exports.CacheUtils = CacheUtils;
-
-
-/***/ }),
-
-/***/ 953:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getJobStatus = getJobStatus;
-const core = __importStar(__nccwpck_require__(6966));
-async function getJobStatus(githubToken) {
-    // First check process exit code - most reliable indicator
-    if (process.exitCode && process.exitCode !== 0) {
-        core.info(`Process exit code is ${process.exitCode}, indicating job failure.`);
-        return 'failure';
-    }
-    const token = githubToken || process.env.ACTIONS_RUNTIME_TOKEN;
-    const githubApiUrl = process.env.GITHUB_API_URL;
-    const jobName = process.env.GITHUB_JOB;
-    const runId = process.env.GITHUB_RUN_ID;
-    const repository = process.env.GITHUB_REPOSITORY;
-    if (!token || !githubApiUrl || !jobName || !runId || !repository) {
-        core.warning('Missing GitHub Actions environment variables or token to determine job status. Cannot determine status reliably.');
-        return 'unknown';
-    }
-    const [owner, repo] = repository.split('/');
-    try {
-        // GitHub API headers
-        const headers = {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'User-Agent': 'actions/s3-cache'
-        };
-        const jobsUrl = `${githubApiUrl}/repos/${owner}/${repo}/actions/runs/${runId}/jobs`;
-        core.debug(`Querying GitHub API for job status: ${jobsUrl}`);
-        const response = await fetch(jobsUrl, { headers });
-        if (!response.ok) {
-            core.warning(`Failed to query GitHub API for job status: ${response.status} - ${response.statusText}. Cannot determine status reliably.`);
-            return 'unknown';
-        }
-        const data = await response.json();
-        const currentJob = data.jobs?.find((job) => job.name === jobName);
-        if (currentJob) {
-            const status = currentJob.conclusion || currentJob.status;
-            core.info(`Current job status from API: ${status}`);
-            return status;
-        }
-        else {
-            core.warning(`Could not find current job ('${jobName}') in API response. Cannot determine status reliably.`);
-            return 'unknown';
-        }
-    }
-    catch (error) {
-        core.warning(`Error querying GitHub API for job status: ${error.message}. Cannot determine status reliably.`);
-        return 'unknown';
-    }
-}
 
 
 /***/ }),
