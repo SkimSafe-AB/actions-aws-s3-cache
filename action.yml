@@ -60,11 +60,33 @@ runs:
       id: restore
       shell: bash
       run: node ${{ github.action_path }}/dist/restore/index.js
+      env:
+        INPUT_KEY: ${{ inputs.key }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_RESTORE_KEYS: ${{ inputs.restore-keys }}
+        INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        INPUT_AWS_REGION: ${{ inputs.aws-region }}
+        INPUT_S3_BUCKET: ${{ inputs.s3-bucket }}
+        INPUT_S3_PREFIX: ${{ inputs.s3-prefix }}
+        INPUT_COMPRESSION_LEVEL: ${{ inputs.compression-level }}
+        INPUT_FAIL_ON_CACHE_MISS: ${{ inputs.fail-on-cache-miss }}
 
     - name: Save Cache
       if: always() && steps.restore.outputs.cache-hit != 'true'
       shell: bash
       run: node ${{ github.action_path }}/dist/save/index.js
+      env:
+        INPUT_KEY: ${{ inputs.key }}
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_RESTORE_KEYS: ${{ inputs.restore-keys }}
+        INPUT_AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        INPUT_AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        INPUT_AWS_REGION: ${{ inputs.aws-region }}
+        INPUT_S3_BUCKET: ${{ inputs.s3-bucket }}
+        INPUT_S3_PREFIX: ${{ inputs.s3-prefix }}
+        INPUT_COMPRESSION_LEVEL: ${{ inputs.compression-level }}
+        INPUT_FAIL_ON_CACHE_MISS: ${{ inputs.fail-on-cache-miss }}
 
 branding:
   icon: 'archive'

@@ -59869,6 +59869,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(6966));
 const github = __importStar(__nccwpck_require__(4903));
+const types_1 = __nccwpck_require__(3244);
 class Config {
     constructor() {
         // Get inputs directly using core.getInput
@@ -59914,35 +59915,35 @@ class Config {
         core.info(`DEBUG Config: github-ref=${this.githubContext.ref}`);
         // Validate required inputs
         if (!this.input.key) {
-            throw new Error(`The 'key' input is not specified`);
+            throw new types_1.CacheError(`The 'key' input is not specified`);
         }
         if (!this.input.path) {
-            throw new Error(`The 'path' input is not specified`);
+            throw new types_1.CacheError(`The 'path' input is not specified`);
         }
         if (!this.input.awsAccessKeyId) {
-            throw new Error(`The 'aws-access-key-id' input is not specified`);
+            throw new types_1.CacheError(`The 'aws-access-key-id' input is not specified`);
         }
         if (!this.input.awsSecretAccessKey) {
-            throw new Error(`The 'aws-secret-access-key' input is not specified`);
+            throw new types_1.CacheError(`The 'aws-secret-access-key' input is not specified`);
         }
         if (!this.input.awsRegion) {
-            throw new Error(`The 'aws-region' input is not specified`);
+            throw new types_1.CacheError(`The 'aws-region' input is not specified`);
         }
         if (!this.input.s3Bucket) {
-            throw new Error(`The 's3-bucket' input is not specified`);
+            throw new types_1.CacheError(`The 's3-bucket' input is not specified`);
         }
         if (this.parsedInputs.paths.length === 0) {
-            throw new Error('At least one path must be specified');
+            throw new types_1.CacheError('At least one path must be specified');
         }
         if (!isNaN(this.parsedInputs.compressionLevel) &&
             (this.parsedInputs.compressionLevel < 1 || this.parsedInputs.compressionLevel > 9)) {
-            throw new Error('compression-level must be between 1 and 9');
+            throw new types_1.CacheError('compression-level must be between 1 and 9');
         }
         if (!this.githubContext.repository) {
-            throw new Error('GITHUB_REPOSITORY environment variable is not set');
+            throw new types_1.CacheError('GITHUB_REPOSITORY environment variable is not set');
         }
         if (!this.githubContext.ref) {
-            throw new Error('GITHUB_REF_NAME environment variable is not set');
+            throw new types_1.CacheError('GITHUB_REF_NAME environment variable is not set');
         }
     }
     /**

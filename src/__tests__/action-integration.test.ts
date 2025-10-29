@@ -1,5 +1,4 @@
 import * as core from '@actions/core';
-import * as fs from 'fs';
 
 // Mock modules first
 jest.mock('fs', () => ({
@@ -33,10 +32,8 @@ jest.mock('@aws-sdk/lib-storage', () => ({
 }));
 
 describe('Full Action Integration Tests', () => {
-  const mockSetOutput = core.setOutput as jest.MockedFunction<typeof core.setOutput>;
   const mockSetFailed = core.setFailed as jest.MockedFunction<typeof core.setFailed>;
   const mockInfo = core.info as jest.MockedFunction<typeof core.info>;
-  const mockDebug = core.debug as jest.MockedFunction<typeof core.debug>;
   const mockGetInput = core.getInput as jest.MockedFunction<typeof core.getInput>;
   const mockGetBooleanInput = core.getBooleanInput as jest.MockedFunction<typeof core.getBooleanInput>;
 

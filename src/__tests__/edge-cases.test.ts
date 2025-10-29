@@ -19,18 +19,6 @@ describe('Edge Cases and Error Scenarios', () => {
   describe('Input Name Conversion Edge Cases', () => {
     it('should handle complex input names with multiple hyphens', () => {
       // Test that aws-access-key-id becomes INPUT_AWS_ACCESS_KEY_ID
-      const inputMappings = {
-        'key': 'INPUT_KEY',
-        'path': 'INPUT_PATH',
-        'restore-keys': 'INPUT_RESTORE_KEYS',
-        'aws-access-key-id': 'INPUT_AWS_ACCESS_KEY_ID',
-        'aws-secret-access-key': 'INPUT_AWS_SECRET_ACCESS_KEY',
-        'aws-region': 'INPUT_AWS_REGION',
-        's3-bucket': 'INPUT_S3_BUCKET',
-        's3-prefix': 'INPUT_S3_PREFIX',
-        'compression-level': 'INPUT_COMPRESSION_LEVEL',
-        'fail-on-cache-miss': 'INPUT_FAIL_ON_CACHE_MISS'
-      };
 
       // Set all environment variables
       process.env.INPUT_KEY = 'test-key';
