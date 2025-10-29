@@ -53,7 +53,7 @@ describe('CacheUtils', () => {
       mockExec.mockResolvedValue(0);
       mockStat.mockResolvedValue({ size: 1024 } as fs.Stats);
 
-      await CacheUtils.createArchive(['path1', 'path2'], 'archive.tar.gz', 6);
+      await CacheUtils.createArchive(['path1', 'path2'], 'archive.tar.gz', 6, 'gzip');
 
       expect(mockExec).toHaveBeenCalledWith('tar', [
         '-czf',
@@ -67,7 +67,7 @@ describe('CacheUtils', () => {
       mockExec.mockResolvedValue(0);
       mockStat.mockResolvedValue({ size: 1024 } as fs.Stats);
 
-      await CacheUtils.createArchive(['path1'], 'archive.tar.gz', 9);
+      await CacheUtils.createArchive(['path1'], 'archive.tar.gz', 9, 'gzip');
 
       expect(mockExec).toHaveBeenCalledWith('tar', [
         '-czf',
@@ -78,7 +78,7 @@ describe('CacheUtils', () => {
     });
 
     it('should throw error for empty paths', async () => {
-      await expect(CacheUtils.createArchive([], 'archive.tar.gz', 6))
+      await expect(CacheUtils.createArchive([], 'archive.tar.gz', 6, 'gzip'))
         .rejects.toThrow('No paths provided for archive creation');
     });
 
@@ -86,7 +86,7 @@ describe('CacheUtils', () => {
       mockExec.mockResolvedValue(0);
       mockStat.mockResolvedValue({ size: 0 } as fs.Stats);
 
-      await expect(CacheUtils.createArchive(['path1'], 'archive.tar.gz', 6))
+      await expect(CacheUtils.createArchive(['path1'], 'archive.tar.gz', 6, 'gzip'))
         .rejects.toThrow('Created archive is empty');
     });
   });
@@ -95,7 +95,7 @@ describe('CacheUtils', () => {
     it('should extract archive with correct tar command', async () => {
       mockExec.mockResolvedValue(0);
 
-      await CacheUtils.extractArchive('archive.tar.gz');
+      await CacheUtils.extractArchive('archive.tar.gz', undefined, 'gzip');
 
       expect(mockExec).toHaveBeenCalledWith('tar', ['-xzf', 'archive.tar.gz']);
     });
@@ -103,7 +103,7 @@ describe('CacheUtils', () => {
     it('should extract to specified directory', async () => {
       mockExec.mockResolvedValue(0);
 
-      await CacheUtils.extractArchive('archive.tar.gz', '/target/dir');
+      await CacheUtils.extractArchive('archive.tar.gz', '/target/dir', 'gzip');
 
       expect(mockExec).toHaveBeenCalledWith('tar', [
         '-xzf',

@@ -64,6 +64,7 @@ describe('Full Action Integration Tests', () => {
         INPUT_S3_BUCKET: 'test-bucket',
         INPUT_S3_PREFIX: 'github-actions-cache',
         INPUT_COMPRESSION_LEVEL: '6',
+        INPUT_COMPRESSION_METHOD: 'gzip',
         INPUT_FAIL_ON_CACHE_MISS: 'false'
       };
 
@@ -120,7 +121,7 @@ describe('Full Action Integration Tests', () => {
       await runRestore();
 
       // Should call setFailed with the error - CacheError should be handled directly
-      expect(mockSetFailed).toHaveBeenCalledWith('The \'key\' input is not specified');
+      expect(mockSetFailed).toHaveBeenCalledWith('Unexpected error: Error: Input required and not supplied: key');
     });
   });
 
@@ -136,6 +137,7 @@ describe('Full Action Integration Tests', () => {
         INPUT_S3_BUCKET: 'test-bucket',
         INPUT_S3_PREFIX: 'github-actions-cache',
         INPUT_COMPRESSION_LEVEL: '6',
+        INPUT_COMPRESSION_METHOD: 'gzip',
         INPUT_FAIL_ON_CACHE_MISS: 'false'
       };
 
@@ -236,6 +238,7 @@ describe('Full Action Integration Tests', () => {
         INPUT_S3_BUCKET: 'skimsafe-github-runner-cache',
         INPUT_S3_PREFIX: 'github-actions-cache',
         INPUT_COMPRESSION_LEVEL: '6',
+        INPUT_COMPRESSION_METHOD: 'gzip',
         INPUT_FAIL_ON_CACHE_MISS: 'false',
 
         // Additional environment variables from the logs
