@@ -7,7 +7,7 @@ import { CacheError, S3Error, S3CacheMetadata } from './types';
 /**
  * Main save function
  */
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
     core.info('S3 Cache Action - Save phase starting');
 

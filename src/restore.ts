@@ -7,7 +7,7 @@ import { CacheError, S3Error } from './types';
 /**
  * Main restore function
  */
-async function run(): Promise<void> {
+export async function run(): Promise<void> {
   try {
     core.info('S3 Cache Action - Restore phase starting');
 

@@ -18,8 +18,13 @@ export function getInputs(): CacheInputs {
   const failOnCacheMiss = core.getBooleanInput('fail-on-cache-miss');
 
   // Debug logging to help troubleshoot
-  core.debug(`Inputs received - key: ${key ? 'present' : 'missing'}, paths: ${pathsInput ? 'present' : 'missing'}`);
-  core.debug(`AWS config - region: ${awsRegion}, bucket: ${s3Bucket}, prefix: ${s3Prefix}`);
+  core.info(`DEBUG: Inputs received - key: ${key ? 'present' : 'missing'}, paths: ${pathsInput ? 'present' : 'missing'}`);
+  core.info(`DEBUG: AWS config - region: ${awsRegion}, bucket: ${s3Bucket}, prefix: ${s3Prefix}`);
+
+  // Also log environment variables for debugging
+  core.info(`DEBUG: Environment check - INPUT_KEY: ${process.env.INPUT_KEY ? 'present' : 'missing'}`);
+  core.info(`DEBUG: Environment check - INPUT_PATH: ${process.env.INPUT_PATH ? 'present' : 'missing'}`);
+  core.info(`DEBUG: All INPUT_ env vars: ${Object.keys(process.env).filter(k => k.startsWith('INPUT_')).join(', ')}`);
 
   // Parse paths - split by newlines and filter empty lines
   const paths = pathsInput
@@ -35,8 +40,8 @@ export function getInputs(): CacheInputs {
         .filter(k => k.length > 0)
     : undefined;
 
-  // Validate compression level
-  if (compressionLevel < 1 || compressionLevel > 9) {
+  // Validate compression level (only if it's a valid number)
+  if (!isNaN(compressionLevel) && (compressionLevel < 1 || compressionLevel > 9)) {
     throw new Error('compression-level must be between 1 and 9');
   }
 
