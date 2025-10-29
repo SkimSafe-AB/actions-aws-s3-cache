@@ -13,6 +13,7 @@ class Config {
     s3Bucket: string;
     s3Prefix: string;
     compressionLevel: string;
+    compressionMethod: string;
     failOnCacheMiss: boolean;
   };
 
@@ -27,6 +28,7 @@ class Config {
     paths: string[];
     restoreKeys?: string[];
     compressionLevel: number;
+    compressionMethod: string;
   };
 
   constructor() {
@@ -40,6 +42,7 @@ class Config {
       s3Bucket: core.getInput('s3-bucket', { required: true, trimWhitespace: true }),
       s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
       compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
+      compressionMethod: core.getInput('compression-method', { trimWhitespace: true }) || 'gzip',
       failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
     };
 
@@ -63,7 +66,8 @@ class Config {
             .map(k => k.trim())
             .filter(k => k.length > 0)
         : undefined,
-      compressionLevel: parseInt(this.input.compressionLevel, 10)
+      compressionLevel: parseInt(this.input.compressionLevel, 10),
+      compressionMethod: this.input.compressionMethod
     };
 
     // Log debug info
@@ -89,8 +93,8 @@ class Config {
       throw new CacheError('GITHUB_REPOSITORY environment variable is not set');
     }
 
-    if (!this.githubContext.ref) {
-      throw new CacheError('GITHUB_REF_NAME environment variable is not set');
+    if (this.parsedInputs.compressionMethod && !['gzip', 'zstd'].includes(this.parsedInputs.compressionMethod)) {
+      throw new CacheError('compression-method must be either `gzip` or `zstd`');
     }
   }
 
@@ -99,7 +103,8 @@ class Config {
    */
   generateS3Key(): string {
     const repoName = this.githubContext.repository.split('/').pop() || this.githubContext.repository;
-    return `${this.input.s3Prefix}/${repoName}/${this.githubContext.ref}/${this.input.key}.tar.gz`;
+    const extension = this.parsedInputs.compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz';
+    return `${this.input.s3Prefix}/${repoName}/${this.githubContext.ref}/${this.input.key}.${extension}`;
   }
 }
 

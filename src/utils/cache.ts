@@ -36,16 +36,33 @@ export class CacheUtils {
     }
   }
 
-  /**
-   * Create a compressed tar archive of the specified paths
-   */
-  static async createArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void> {
+  static async isZstdInstalled(): Promise<boolean> {
+    try {
+      await exec.exec('which', ['zstd']);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static async createArchive(paths: string[], archivePath: string, compressionLevel: number, compressionMethod: string): Promise<void> {
     if (paths.length === 0) {
       throw new CacheError('No paths provided for archive creation');
     }
 
     core.info(`Creating cache archive with compression level ${compressionLevel}`);
 
+    if (compressionMethod === 'zstd') {
+      await CacheUtils.createZstdArchive(paths, archivePath, compressionLevel);
+    } else {
+      await CacheUtils.createGzipArchive(paths, archivePath, compressionLevel);
+    }
+  }
+
+  /**
+   * Create a compressed tar archive of the specified paths
+   */
+  static async createGzipArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void> {
     // Build tar command arguments
     const tarArgs = ['-czf', archivePath];
 
@@ -76,12 +93,47 @@ export class CacheUtils {
     }
   }
 
+  static async createZstdArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void> {
+    if (!await CacheUtils.isZstdInstalled()) {
+      throw new CacheError('zstd is not installed. Please install it to use zstd compression.');
+    }
+
+    const tarPath = `${archivePath}.tar`;
+
+    try {
+      await exec.exec('tar', ['-cf', tarPath, ...paths]);
+      await exec.exec('zstd', ['-T0', `-${compressionLevel}`,'--rm', tarPath, '-o', archivePath]);
+
+      // Verify archive was created and has content
+      const stats = await fs.promises.stat(archivePath);
+      if (stats.size === 0) {
+        throw new CacheError('Created archive is empty');
+      }
+
+      core.info(`Cache archive created (${stats.size} bytes)`);
+
+      // List files in archive for debugging
+      core.info('Listing files in archive:');
+      await exec.exec('tar', ['-tvf', archivePath]);
+    } catch (error: any) {
+      throw new CacheError(`Failed to create archive: ${error.message}`);
+    }
+  }
+
+  static async extractArchive(archivePath: string, extractTo: string | undefined, compressionMethod: string): Promise<void> {
+    core.info('Extracting cache archive');
+
+    if (compressionMethod === 'zstd') {
+      await CacheUtils.extractZstdArchive(archivePath, extractTo);
+    } else {
+      await CacheUtils.extractGzipArchive(archivePath, extractTo);
+    }
+  }
+
   /**
    * Extract a tar archive
    */
-  static async extractArchive(archivePath: string, extractTo?: string): Promise<void> {
-    core.info('Extracting cache archive');
-
+  static async extractGzipArchive(archivePath: string, extractTo?: string): Promise<void> {
     const tarArgs = ['-xzf', archivePath];
 
     if (extractTo) {
@@ -89,6 +141,26 @@ export class CacheUtils {
     }
 
     try {
+      await exec.exec('tar', tarArgs);
+      core.info('Cache archive extracted successfully');
+    } catch (error: any) {
+      throw new CacheError(`Failed to extract archive: ${error.message}`);
+    }
+  }
+
+  static async extractZstdArchive(archivePath: string, extractTo?: string): Promise<void> {
+    if (!await CacheUtils.isZstdInstalled()) {
+      throw new CacheError('zstd is not installed. Please install it to use zstd compression.');
+    }
+
+    const tarPath = `${archivePath}.tar`;
+
+    try {
+      await exec.exec('zstd', ['-d', '--rm', '-o', tarPath, archivePath]);
+      const tarArgs = ['-xf', tarPath];
+      if (extractTo) {
+        tarArgs.push('-C', extractTo);
+      }
       await exec.exec('tar', tarArgs);
       core.info('Cache archive extracted successfully');
     } catch (error: any) {

@@ -9,6 +9,7 @@ declare class Config {
         s3Bucket: string;
         s3Prefix: string;
         compressionLevel: string;
+        compressionMethod: string;
         failOnCacheMiss: boolean;
     };
     githubContext: {
@@ -21,6 +22,7 @@ declare class Config {
         paths: string[];
         restoreKeys?: string[];
         compressionLevel: number;
+        compressionMethod: string;
     };
     constructor();
     /**

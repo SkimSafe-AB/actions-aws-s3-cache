@@ -10,14 +10,19 @@ export declare class CacheUtils {
      * Check if a path exists
      */
     static pathExists(filePath: string): Promise<boolean>;
+    static isZstdInstalled(): Promise<boolean>;
+    static createArchive(paths: string[], archivePath: string, compressionLevel: number, compressionMethod: string): Promise<void>;
     /**
      * Create a compressed tar archive of the specified paths
      */
-    static createArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void>;
+    static createGzipArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void>;
+    static createZstdArchive(paths: string[], archivePath: string, compressionLevel: number): Promise<void>;
+    static extractArchive(archivePath: string, extractTo: string | undefined, compressionMethod: string): Promise<void>;
     /**
      * Extract a tar archive
      */
-    static extractArchive(archivePath: string, extractTo?: string): Promise<void>;
+    static extractGzipArchive(archivePath: string, extractTo?: string): Promise<void>;
+    static extractZstdArchive(archivePath: string, extractTo?: string): Promise<void>;
     /**
      * Clean up temporary files
      */

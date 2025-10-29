@@ -36,6 +36,10 @@ inputs:
     description: 'Compression level for cache archive (1-9, default: 6)'
     required: false
     default: '6'
+  compression-method:
+    description: 'The compression method to use. Can be `gzip` or `zstd`.'
+    required: false
+    default: 'gzip'
   fail-on-cache-miss:
     description: 'Fail the workflow if cache is not found'
     required: false

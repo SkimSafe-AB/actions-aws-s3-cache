@@ -55,7 +55,7 @@ export async function run(): Promise<void> {
       return;
     }
 
-    await saveCache(s3Client, s3Key, validPaths, config.parsedInputs.compressionLevel, config.githubContext.repository, config.githubContext.ref, config.input.key);
+    await saveCache(s3Client, s3Key, validPaths, config.parsedInputs.compressionLevel, config.parsedInputs.compressionMethod, config.githubContext.repository, config.githubContext.ref, config.input.key);
 
   } catch (error) {
     if (error instanceof CacheError || error instanceof S3Error) {
@@ -74,15 +74,16 @@ async function saveCache(
   s3Key: string,
   paths: string[],
   compressionLevel: number,
+  compressionMethod: string,
   repository: string,
   ref: string,
   cacheKey: string
 ): Promise<void> {
-  const archivePath = 'cache.tar.gz';
+  const archivePath = `cache.${compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz'}`;
 
   try {
     // Create cache archive
-    await CacheUtils.createArchive(paths, archivePath, compressionLevel);
+    await CacheUtils.createArchive(paths, archivePath, compressionLevel, compressionMethod);
 
     // Prepare metadata
     const metadata: S3CacheMetadata = {

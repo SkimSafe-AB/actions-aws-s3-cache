@@ -59882,6 +59882,7 @@ class Config {
             s3Bucket: core.getInput('s3-bucket', { required: true, trimWhitespace: true }),
             s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
             compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
+            compressionMethod: core.getInput('compression-method', { trimWhitespace: true }) || 'gzip',
             failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
         };
         // Get GitHub context
@@ -59903,7 +59904,8 @@ class Config {
                     .map(k => k.trim())
                     .filter(k => k.length > 0)
                 : undefined,
-            compressionLevel: parseInt(this.input.compressionLevel, 10)
+            compressionLevel: parseInt(this.input.compressionLevel, 10),
+            compressionMethod: this.input.compressionMethod
         };
         // Log debug info
         core.info(`DEBUG Config: key=${this.input.key ? 'present' : 'missing'}`);
@@ -59923,8 +59925,8 @@ class Config {
         if (!this.githubContext.repository) {
             throw new types_1.CacheError('GITHUB_REPOSITORY environment variable is not set');
         }
-        if (!this.githubContext.ref) {
-            throw new types_1.CacheError('GITHUB_REF_NAME environment variable is not set');
+        if (this.parsedInputs.compressionMethod && !['gzip', 'zstd'].includes(this.parsedInputs.compressionMethod)) {
+            throw new types_1.CacheError('compression-method must be either `gzip` or `zstd`');
         }
     }
     /**
@@ -59932,7 +59934,8 @@ class Config {
      */
     generateS3Key() {
         const repoName = this.githubContext.repository.split('/').pop() || this.githubContext.repository;
-        return `${this.input.s3Prefix}/${repoName}/${this.githubContext.ref}/${this.input.key}.tar.gz`;
+        const extension = this.parsedInputs.compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz';
+        return `${this.input.s3Prefix}/${repoName}/${this.githubContext.ref}/${this.input.key}.${extension}`;
     }
 }
 exports["default"] = Config;
@@ -60046,13 +60049,13 @@ async function run() {
  * Download and extract cache from S3
  */
 async function restoreCache(s3Client, s3Key, matchedKey, config) {
-    const archivePath = 'cache.tar.gz';
+    const archivePath = `cache.${config.parsedInputs.compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz'}`;
     try {
         // Download cache archive
         core.info(`Downloading cache from S3`);
         await s3Client.downloadObject(s3Key, archivePath);
         // Extract cache
-        await cache_1.CacheUtils.extractArchive(archivePath);
+        await cache_1.CacheUtils.extractArchive(archivePath, undefined, config.parsedInputs.compressionMethod);
         // Set outputs
         cache_1.CacheUtils.setOutputs(true, config.input.key, matchedKey);
         core.saveState('cache-hit', 'true');
@@ -60173,14 +60176,31 @@ class CacheUtils {
             return false;
         }
     }
-    /**
-     * Create a compressed tar archive of the specified paths
-     */
-    static async createArchive(paths, archivePath, compressionLevel) {
+    static async isZstdInstalled() {
+        try {
+            await exec.exec('which', ['zstd']);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }
+    static async createArchive(paths, archivePath, compressionLevel, compressionMethod) {
         if (paths.length === 0) {
             throw new types_1.CacheError('No paths provided for archive creation');
         }
         core.info(`Creating cache archive with compression level ${compressionLevel}`);
+        if (compressionMethod === 'zstd') {
+            await CacheUtils.createZstdArchive(paths, archivePath, compressionLevel);
+        }
+        else {
+            await CacheUtils.createGzipArchive(paths, archivePath, compressionLevel);
+        }
+    }
+    /**
+     * Create a compressed tar archive of the specified paths
+     */
+    static async createGzipArchive(paths, archivePath, compressionLevel) {
         // Build tar command arguments
         const tarArgs = ['-czf', archivePath];
         // Add compression level if supported (GNU tar)
@@ -60205,16 +60225,64 @@ class CacheUtils {
             throw new types_1.CacheError(`Failed to create archive: ${error.message}`);
         }
     }
+    static async createZstdArchive(paths, archivePath, compressionLevel) {
+        if (!await CacheUtils.isZstdInstalled()) {
+            throw new types_1.CacheError('zstd is not installed. Please install it to use zstd compression.');
+        }
+        const tarPath = `${archivePath}.tar`;
+        try {
+            await exec.exec('tar', ['-cf', tarPath, ...paths]);
+            await exec.exec('zstd', ['-T0', `-${compressionLevel}`, '--rm', tarPath, '-o', archivePath]);
+            // Verify archive was created and has content
+            const stats = await fs.promises.stat(archivePath);
+            if (stats.size === 0) {
+                throw new types_1.CacheError('Created archive is empty');
+            }
+            core.info(`Cache archive created (${stats.size} bytes)`);
+            // List files in archive for debugging
+            core.info('Listing files in archive:');
+            await exec.exec('tar', ['-tvf', archivePath]);
+        }
+        catch (error) {
+            throw new types_1.CacheError(`Failed to create archive: ${error.message}`);
+        }
+    }
+    static async extractArchive(archivePath, extractTo, compressionMethod) {
+        core.info('Extracting cache archive');
+        if (compressionMethod === 'zstd') {
+            await CacheUtils.extractZstdArchive(archivePath, extractTo);
+        }
+        else {
+            await CacheUtils.extractGzipArchive(archivePath, extractTo);
+        }
+    }
     /**
      * Extract a tar archive
      */
-    static async extractArchive(archivePath, extractTo) {
-        core.info('Extracting cache archive');
+    static async extractGzipArchive(archivePath, extractTo) {
         const tarArgs = ['-xzf', archivePath];
         if (extractTo) {
             tarArgs.push('-C', extractTo);
         }
         try {
+            await exec.exec('tar', tarArgs);
+            core.info('Cache archive extracted successfully');
+        }
+        catch (error) {
+            throw new types_1.CacheError(`Failed to extract archive: ${error.message}`);
+        }
+    }
+    static async extractZstdArchive(archivePath, extractTo) {
+        if (!await CacheUtils.isZstdInstalled()) {
+            throw new types_1.CacheError('zstd is not installed. Please install it to use zstd compression.');
+        }
+        const tarPath = `${archivePath}.tar`;
+        try {
+            await exec.exec('zstd', ['-d', '--rm', '-o', tarPath, archivePath]);
+            const tarArgs = ['-xf', tarPath];
+            if (extractTo) {
+                tarArgs.push('-C', extractTo);
+            }
             await exec.exec('tar', tarArgs);
             core.info('Cache archive extracted successfully');
         }
