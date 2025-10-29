@@ -1,0 +1,71 @@
+
+name: 'S3 Cache'
+description: 'Cache dependencies and build outputs to AWS S3'
+author: 'skimsafe'
+
+inputs:
+  key:
+    description: 'An explicit key for restoring and saving the cache'
+    required: true
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache and restore'
+    required: true
+  restore-keys:
+    description: 'An ordered list of keys to use for restoring stale cache if no cache hit occurred for key'
+    required: false
+
+  # AWS Configuration
+  aws-access-key-id:
+    description: 'AWS access key ID'
+    required: true
+  aws-secret-access-key:
+    description: 'AWS secret access key'
+    required: true
+  aws-region:
+    description: 'AWS region'
+    required: true
+  s3-bucket:
+    description: 'S3 bucket name for cache storage'
+    required: true
+  s3-prefix:
+    description: 'S3 key prefix for cache objects'
+    required: false
+    default: 'github-actions-cache'
+
+  # Advanced options
+  compression-level:
+    description: 'Compression level for cache archive (1-9, default: 6)'
+    required: false
+    default: '6'
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache is not found'
+    required: false
+    default: 'false'
+
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+    value: ${{ steps.restore.outputs.cache-hit }}
+  cache-primary-key:
+    description: 'The key which was used to save the cache'
+    value: ${{ steps.restore.outputs.cache-primary-key }}
+  cache-matched-key:
+    description: 'The key which was used to restore the cache'
+    value: ${{ steps.restore.outputs.cache-matched-key }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore Cache
+      id: restore
+      shell: bash
+      run: node ${{ github.action_path }}/dist/restore/index.js
+
+    - name: Save Cache
+      if: always() && steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      run: node ${{ github.action_path }}/dist/save/index.js
+
+branding:
+  icon: 'archive'
+  color: 'gray-dark'
