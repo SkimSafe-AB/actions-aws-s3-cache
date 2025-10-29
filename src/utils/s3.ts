@@ -35,43 +35,42 @@ export class S3CacheClient {
    */
   async downloadObject(key: string, localPath: string): Promise<void> {
     try {
-      const headObjectResponse = await this.client.send(new HeadObjectCommand({
+      const command = new GetObjectCommand({
         Bucket: this.bucket,
         Key: key
-      }));
+      });
 
-      const contentLength = headObjectResponse.ContentLength;
-      if (!contentLength) {
-        throw new S3Error('Could not determine content length for multipart download');
+      const response = await this.client.send(command);
+
+      if (!response.Body) {
+        throw new S3Error('Empty response body from S3');
       }
 
-      const partSize = 1024 * 1024 * 5; // 5MB parts
-      const numParts = Math.ceil(contentLength / partSize);
+      const writeStream = fs.createWriteStream(localPath);
 
-      const downloadPromises: Promise<void>[] = [];
-      const fileHandle = await fs.promises.open(localPath, 'w');
+      // Convert the readable stream to bytes and write to file
+      if (response.Body) {
+        const chunks: Uint8Array[] = [];
 
-      for (let i = 0; i < numParts; i++) {
-        const start = i * partSize;
-        const end = Math.min(start + partSize - 1, contentLength - 1);
-        const range = `bytes=${start}-${end}`;
+        // Handle the async iterable response body
+        for await (const chunk of response.Body as any) {
+          chunks.push(chunk);
+        }
 
-        downloadPromises.push(this.client.send(new GetObjectCommand({
-          Bucket: this.bucket,
-          Key: key,
-          Range: range
-        })).then(async (response) => {
-          if (!response.Body) {
-            throw new S3Error(`Empty response body for part ${i}`);
-          }
-          const buffer = Buffer.from(await response.Body.transformToByteArray());
-          await fileHandle.write(buffer, 0, buffer.length, start);
-        }));
+        const buffer = Buffer.concat(chunks);
+
+        return new Promise((resolve, reject) => {
+          writeStream.write(buffer, (error) => {
+            if (error) {
+              reject(error);
+            } else {
+              writeStream.end();
+              writeStream.on('finish', resolve);
+              writeStream.on('error', reject);
+            }
+          });
+        });
       }
-
-      await Promise.all(downloadPromises);
-      await fileHandle.close();
-
     } catch (error: any) {
       throw new S3Error(`Failed to download object: ${error.message}`, error.name);
     }
