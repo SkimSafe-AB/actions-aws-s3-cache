@@ -59991,6 +59991,7 @@ const config_1 = __importDefault(__nccwpck_require__(6878));
 const s3_1 = __nccwpck_require__(7264);
 const cache_1 = __nccwpck_require__(2078);
 const types_1 = __nccwpck_require__(3244);
+const github_1 = __nccwpck_require__(953);
 /**
  * Main save function
  */
@@ -60004,6 +60005,11 @@ async function run() {
         }
         core.info('S3 Cache Action - Save phase starting');
         core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
+        const jobStatus = await (0, github_1.getJobStatus)();
+        if (jobStatus !== 'success') {
+            core.info(`Job status is '${jobStatus}', skipping cache save.`);
+            return;
+        }
         const config = new config_1.default();
         core.info(`Saving cache with key: ${config.input.key}`);
         // Validate that paths exist
@@ -60338,6 +60344,95 @@ class CacheUtils {
     }
 }
 exports.CacheUtils = CacheUtils;
+
+
+/***/ }),
+
+/***/ 953:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getJobStatus = getJobStatus;
+const core = __importStar(__nccwpck_require__(6966));
+async function getJobStatus() {
+    const token = process.env.ACTIONS_RUNTIME_TOKEN;
+    const githubApiUrl = process.env.GITHUB_API_URL;
+    const jobName = process.env.GITHUB_JOB;
+    const runId = process.env.GITHUB_RUN_ID;
+    const repository = process.env.GITHUB_REPOSITORY;
+    if (!token || !githubApiUrl || !jobName || !runId || !repository) {
+        core.warning('Missing GitHub Actions environment variables to determine job status. Assuming success.');
+        return 'success';
+    }
+    const [owner, repo] = repository.split('/');
+    try {
+        // GitHub API requires a specific API version header
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json;api-version=6.0-preview',
+            'User-Agent': 'actions/s3-cache'
+        };
+        // Construct the URL to get job details
+        // This is a simplified example, the actual API might require more specific job ID
+        // For now, we'll try to list jobs and find the current one by name
+        const jobsUrl = `${githubApiUrl}/repos/${owner}/${repo}/actions/runs/${runId}/jobs`;
+        core.info(`Querying GitHub API for job status: ${jobsUrl}`);
+        const response = await fetch(jobsUrl, { headers });
+        if (!response.ok) {
+            core.warning(`Failed to query GitHub API for job status: ${response.status} - ${response.statusText}. Assuming success.`);
+            return 'success';
+        }
+        const data = await response.json();
+        const currentJob = data.value.find((job) => job.name === jobName);
+        if (currentJob) {
+            core.info(`Current job status: ${currentJob.status}`);
+            return currentJob.status;
+        }
+        else {
+            core.warning(`Could not find current job ('${jobName}') in API response. Assuming success.`);
+            return 'success';
+        }
+    }
+    catch (error) {
+        core.warning(`Error querying GitHub API for job status: ${error.message}. Assuming success.`);
+        return 'success';
+    }
+}
 
 
 /***/ }),

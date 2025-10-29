@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as exec from '@actions/exec';
 import { S3CacheClient } from '../utils/s3';
 import { CacheUtils } from '../utils/cache';
+import { getJobStatus } from '../utils/github';
 
 // Mock modules
 jest.mock('fs', () => ({
@@ -22,6 +23,7 @@ jest.mock('@actions/core');
 jest.mock('@actions/exec');
 jest.mock('../utils/s3');
 jest.mock('../utils/cache');
+jest.mock('../utils/github'); // Mock the new github utility
 
 describe('Save Action', () => {
   const mockGetState = core.getState as jest.MockedFunction<typeof core.getState>;
@@ -33,6 +35,7 @@ describe('Save Action', () => {
   const mockObjectExists = S3CacheClient.prototype.objectExists as jest.MockedFunction<typeof S3CacheClient.prototype.objectExists>;
   const mockUploadObject = S3CacheClient.prototype.uploadObject as jest.MockedFunction<typeof S3CacheClient.prototype.uploadObject>;
   const mockGenerateS3Key = jest.spyOn(S3CacheClient, 'generateCacheKey');
+  const mockGetJobStatus = getJobStatus as jest.MockedFunction<typeof getJobStatus>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -60,6 +63,9 @@ describe('Save Action', () => {
 
     // Mock CacheUtils.isZstdInstalled
     (CacheUtils.isZstdInstalled as jest.Mock).mockResolvedValue(true);
+
+    // Mock getJobStatus
+    mockGetJobStatus.mockResolvedValue('success');
   });
 
   it('should skip save if cache was restored', async () => {
@@ -68,6 +74,19 @@ describe('Save Action', () => {
     await run();
 
     expect(mockInfo).toHaveBeenCalledWith('Cache was restored successfully, skipping save.');
+    expect(mockValidatePaths).not.toHaveBeenCalled();
+    expect(mockCreateArchive).not.toHaveBeenCalled();
+    expect(mockUploadObject).not.toHaveBeenCalled();
+  });
+
+  it('should skip save if job failed', async () => {
+    mockGetState.mockReturnValue('false');
+    mockGetJobStatus.mockResolvedValue('failure');
+
+    const { run } = await import('../save');
+    await run();
+
+    expect(mockInfo).toHaveBeenCalledWith('Job status is \'failure\', skipping cache save.');
     expect(mockValidatePaths).not.toHaveBeenCalled();
     expect(mockCreateArchive).not.toHaveBeenCalled();
     expect(mockUploadObject).not.toHaveBeenCalled();
