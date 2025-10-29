@@ -50,7 +50,7 @@ outputs:
     description: 'The key which was used to restore the cache'
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/restore/index.js'
   post: 'dist/save/index.js'
 
