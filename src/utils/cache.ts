@@ -67,6 +67,10 @@ export class CacheUtils {
       }
 
       core.info(`Cache archive created (${stats.size} bytes)`);
+
+      // List files in archive for debugging
+      core.info('Listing files in archive:');
+      await exec.exec('tar', ['-tvf', archivePath]);
     } catch (error: any) {
       throw new CacheError(`Failed to create archive: ${error.message}`);
     }

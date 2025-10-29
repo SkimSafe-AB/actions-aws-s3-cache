@@ -60197,6 +60197,9 @@ class CacheUtils {
                 throw new types_1.CacheError('Created archive is empty');
             }
             core.info(`Cache archive created (${stats.size} bytes)`);
+            // List files in archive for debugging
+            core.info('Listing files in archive:');
+            await exec.exec('tar', ['-tvf', archivePath]);
         }
         catch (error) {
             throw new types_1.CacheError(`Failed to create archive: ${error.message}`);
