@@ -138,7 +138,56 @@ The AWS credentials provided must have the following S3 permissions:
 | Cost | Free (with limits) | S3 storage + transfer costs |
 | Retention | 7 days (unused) | Configurable via S3 lifecycle |
 
+## Development & Building
+
+### Prerequisites
+- Node.js 18+
+- pnpm package manager
+
+### Building the Action
+```bash
+# Install dependencies
+pnpm install
+
+# Build for production (creates dist/ files)
+pnpm run build:all
+
+# Development commands
+pnpm test                # Run tests
+pnpm run typecheck       # Type checking
+pnpm run lint            # Code linting
+```
+
+### GitHub Actions Deployment
+The `dist/` directory contains the built JavaScript files that GitHub Actions executes:
+- `dist/restore/index.js` - Cache restoration logic
+- `dist/save/index.js` - Cache saving logic
+
+**Important**: The `dist/` files must be committed to your repository for GitHub Actions to work.
+
+### Adding Node.js to Custom Runners
+If using custom GitHub runners without Node.js:
+
+```yaml
+- name: Setup Node.js
+  uses: actions/setup-node@v4
+  with:
+    node-version: '18'
+
+- name: Your S3 Cache Step
+  uses: your-org/s3-cache@v1
+  # ... rest of configuration
+```
+
 ## Troubleshooting
+
+### Node.js Not Found
+**Error**: `node: command not found`
+**Solution**: Add Node.js setup step before using the cache action (see above)
+
+### Missing dist/ Files
+**Error**: `Cannot find module '/path/to/dist/restore/index.js'`
+**Solution**: Run `pnpm run build:all` and commit the `dist/` directory
 
 ### Cache Not Found
 - Verify S3 bucket name and region

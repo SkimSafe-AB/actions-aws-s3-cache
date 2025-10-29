@@ -55598,7 +55598,11 @@ const types_1 = __nccwpck_require__(3244);
  */
 async function run() {
     try {
+        core.info('S3 Cache Action - Restore phase starting');
+        // Add debug information
+        core.debug('Reading action inputs...');
         const inputs = (0, inputs_1.getInputs)();
+        core.debug('Getting GitHub context...');
         const { repository, ref } = cache_1.CacheUtils.getGitHubContext();
         core.info(`Looking for cache with key: ${inputs.key}`);
         // Initialize S3 client
@@ -55916,19 +55920,23 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getInputs = getInputs;
 const core = __importStar(__nccwpck_require__(6966));
 /**
- * Parse and validate action inputs
+ * Parse and validate action inputs using modern GitHub Actions standards
  */
 function getInputs() {
-    const key = core.getInput('key', { required: true });
-    const pathsInput = core.getInput('path', { required: true });
-    const restoreKeysInput = core.getInput('restore-keys');
-    const awsAccessKeyId = core.getInput('aws-access-key-id', { required: true });
-    const awsSecretAccessKey = core.getInput('aws-secret-access-key', { required: true });
-    const awsRegion = core.getInput('aws-region', { required: true });
-    const s3Bucket = core.getInput('s3-bucket', { required: true });
-    const s3Prefix = core.getInput('s3-prefix') || 'github-actions-cache';
-    const compressionLevel = parseInt(core.getInput('compression-level') || '6', 10);
+    // Read inputs with proper trimming and error handling
+    const key = core.getInput('key', { required: true, trimWhitespace: true });
+    const pathsInput = core.getInput('path', { required: true, trimWhitespace: true });
+    const restoreKeysInput = core.getInput('restore-keys', { trimWhitespace: true });
+    const awsAccessKeyId = core.getInput('aws-access-key-id', { required: true, trimWhitespace: true });
+    const awsSecretAccessKey = core.getInput('aws-secret-access-key', { required: true, trimWhitespace: true });
+    const awsRegion = core.getInput('aws-region', { required: true, trimWhitespace: true });
+    const s3Bucket = core.getInput('s3-bucket', { required: true, trimWhitespace: true });
+    const s3Prefix = core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache';
+    const compressionLevel = parseInt(core.getInput('compression-level', { trimWhitespace: true }) || '6', 10);
     const failOnCacheMiss = core.getBooleanInput('fail-on-cache-miss');
+    // Debug logging to help troubleshoot
+    core.debug(`Inputs received - key: ${key ? 'present' : 'missing'}, paths: ${pathsInput ? 'present' : 'missing'}`);
+    core.debug(`AWS config - region: ${awsRegion}, bucket: ${s3Bucket}, prefix: ${s3Prefix}`);
     // Parse paths - split by newlines and filter empty lines
     const paths = pathsInput
         .split('\n')

@@ -9,7 +9,13 @@ import { CacheError, S3Error } from './types';
  */
 async function run(): Promise<void> {
   try {
+    core.info('S3 Cache Action - Restore phase starting');
+
+    // Add debug information
+    core.debug('Reading action inputs...');
     const inputs = getInputs();
+
+    core.debug('Getting GitHub context...');
     const { repository, ref } = CacheUtils.getGitHubContext();
 
     core.info(`Looking for cache with key: ${inputs.key}`);
