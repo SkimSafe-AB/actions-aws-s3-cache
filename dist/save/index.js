@@ -60003,6 +60003,7 @@ async function run() {
             return;
         }
         core.info('S3 Cache Action - Save phase starting');
+        core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
         const config = new config_1.default();
         core.info(`Saving cache with key: ${config.input.key}`);
         // Validate that paths exist

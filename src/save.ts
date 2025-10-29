@@ -17,6 +17,7 @@ export async function run(): Promise<void> {
     }
 
     core.info('S3 Cache Action - Save phase starting');
+    core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
 
     const config = new Config();
     core.info(`Saving cache with key: ${config.input.key}`);
