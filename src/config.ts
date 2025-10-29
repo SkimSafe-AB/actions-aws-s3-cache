@@ -30,18 +30,34 @@ class Config {
   };
 
   constructor() {
-    // Get inputs directly using core.getInput
+    // Get inputs using a reliable method that works in composite actions
+    const getInput = (name: string, required: boolean = false): string => {
+      const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
+      const value = (process.env[envName] || '').trim();
+
+      if (required && !value) {
+        throw new CacheError(`The '${name}' input is not specified`);
+      }
+
+      return value;
+    };
+
+    const getBooleanInput = (name: string): boolean => {
+      const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
+      return process.env[envName] === 'true';
+    };
+
     this.input = {
-      key: core.getInput('key'),
-      path: core.getInput('path'),
-      restoreKeys: core.getInput('restore-keys'),
-      awsAccessKeyId: core.getInput('aws-access-key-id'),
-      awsSecretAccessKey: core.getInput('aws-secret-access-key'),
-      awsRegion: core.getInput('aws-region'),
-      s3Bucket: core.getInput('s3-bucket'),
-      s3Prefix: core.getInput('s3-prefix') || 'github-actions-cache',
-      compressionLevel: core.getInput('compression-level') || '6',
-      failOnCacheMiss: core.getInput('fail-on-cache-miss') === 'true'
+      key: getInput('key', true),
+      path: getInput('path', true),
+      restoreKeys: getInput('restore-keys'),
+      awsAccessKeyId: getInput('aws-access-key-id', true),
+      awsSecretAccessKey: getInput('aws-secret-access-key', true),
+      awsRegion: getInput('aws-region', true),
+      s3Bucket: getInput('s3-bucket', true),
+      s3Prefix: getInput('s3-prefix') || 'github-actions-cache',
+      compressionLevel: getInput('compression-level') || '6',
+      failOnCacheMiss: getBooleanInput('fail-on-cache-miss')
     };
 
     // Get GitHub context
@@ -75,30 +91,7 @@ class Config {
     core.info(`DEBUG Config: github-repo=${this.githubContext.repository}`);
     core.info(`DEBUG Config: github-ref=${this.githubContext.ref}`);
 
-    // Validate required inputs
-    if (!this.input.key) {
-      throw new CacheError(`The 'key' input is not specified`);
-    }
-
-    if (!this.input.path) {
-      throw new CacheError(`The 'path' input is not specified`);
-    }
-
-    if (!this.input.awsAccessKeyId) {
-      throw new CacheError(`The 'aws-access-key-id' input is not specified`);
-    }
-
-    if (!this.input.awsSecretAccessKey) {
-      throw new CacheError(`The 'aws-secret-access-key' input is not specified`);
-    }
-
-    if (!this.input.awsRegion) {
-      throw new CacheError(`The 'aws-region' input is not specified`);
-    }
-
-    if (!this.input.s3Bucket) {
-      throw new CacheError(`The 's3-bucket' input is not specified`);
-    }
+    // Validate optional/parsed inputs
 
     if (this.parsedInputs.paths.length === 0) {
       throw new CacheError('At least one path must be specified');
