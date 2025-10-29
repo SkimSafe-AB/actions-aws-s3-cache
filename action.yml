@@ -45,7 +45,7 @@ inputs:
     required: false
     default: 'false'
   github-token:
-    description: 'GitHub token for API calls (e.g., ${{ github.token }})'
+    description: 'GitHub token for API calls'
     required: false
     default: ''
 
