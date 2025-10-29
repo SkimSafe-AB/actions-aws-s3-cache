@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { getInputs } from './utils/inputs';
+import Config from './config';
 import { S3CacheClient } from './utils/s3';
 import { CacheUtils } from './utils/cache';
 import { CacheError, S3Error, S3CacheMetadata } from './types';
@@ -11,17 +11,11 @@ export async function run(): Promise<void> {
   try {
     core.info('S3 Cache Action - Save phase starting');
 
-    // Add debug information
-    core.debug('Reading action inputs...');
-    const inputs = getInputs();
-
-    core.debug('Getting GitHub context...');
-    const { repository, ref } = CacheUtils.getGitHubContext();
-
-    core.info(`Saving cache with key: ${inputs.key}`);
+    const config = new Config();
+    core.info(`Saving cache with key: ${config.input.key}`);
 
     // Validate that paths exist
-    const { validPaths, missingPaths } = await CacheUtils.validatePaths(inputs.paths);
+    const { validPaths, missingPaths } = await CacheUtils.validatePaths(config.parsedInputs.paths);
 
     if (missingPaths.length > 0) {
       core.warning(`Some cache paths do not exist: ${missingPaths.join(', ')}`);
@@ -35,26 +29,26 @@ export async function run(): Promise<void> {
     // Initialize S3 client
     const s3Client = new S3CacheClient(
       {
-        region: inputs.awsRegion,
+        region: config.input.awsRegion,
         credentials: {
-          accessKeyId: inputs.awsAccessKeyId,
-          secretAccessKey: inputs.awsSecretAccessKey
+          accessKeyId: config.input.awsAccessKeyId,
+          secretAccessKey: config.input.awsSecretAccessKey
         }
       },
-      inputs.s3Bucket
+      config.input.s3Bucket
     );
 
     // Generate cache key
-    const s3Key = S3CacheClient.generateCacheKey(inputs.s3Prefix, repository, ref, inputs.key);
-    CacheUtils.logCacheInfo('save', inputs.key, inputs.s3Bucket, s3Key);
+    const s3Key = config.generateS3Key();
+    CacheUtils.logCacheInfo('save', config.input.key, config.input.s3Bucket, s3Key);
 
     // Check if cache already exists
     if (await s3Client.objectExists(s3Key)) {
-      core.info(`Cache already exists for key ${inputs.key}, skipping save`);
+      core.info(`Cache already exists for key ${config.input.key}, skipping save`);
       return;
     }
 
-    await saveCache(s3Client, s3Key, validPaths, inputs.compressionLevel, repository, ref, inputs.key);
+    await saveCache(s3Client, s3Key, validPaths, config.parsedInputs.compressionLevel, config.githubContext.repository, config.githubContext.ref, config.input.key);
 
   } catch (error) {
     if (error instanceof CacheError || error instanceof S3Error) {

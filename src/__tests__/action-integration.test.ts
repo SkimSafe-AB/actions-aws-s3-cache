@@ -99,8 +99,8 @@ describe('Full Action Integration Tests', () => {
 
       // Verify that core functions were called
       expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Restore phase starting');
-      expect(mockDebug).toHaveBeenCalledWith('Reading action inputs...');
-      expect(mockDebug).toHaveBeenCalledWith('Getting GitHub context...');
+      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: key=present');
+      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: paths=node_modules');
     });
 
     it('should fail gracefully with missing required inputs', async () => {
@@ -122,8 +122,8 @@ describe('Full Action Integration Tests', () => {
       const { run: runRestore } = await import('../restore');
       await runRestore();
 
-      // Should call setFailed with the error (wrapped in "Unexpected error:")
-      expect(mockSetFailed).toHaveBeenCalledWith('Unexpected error: Error: Input required and not supplied: key');
+      // Should call setFailed with the error - CacheError should be handled directly
+      expect(mockSetFailed).toHaveBeenCalledWith('The \'key\' input is not specified');
     });
   });
 
@@ -170,8 +170,8 @@ describe('Full Action Integration Tests', () => {
 
       // Verify that core functions were called
       expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Save phase starting');
-      expect(mockDebug).toHaveBeenCalledWith('Reading action inputs...');
-      expect(mockDebug).toHaveBeenCalledWith('Getting GitHub context...');
+      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: key=present');
+      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: paths=node_modules,.cache');
     });
   });
 

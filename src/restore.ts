@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { getInputs } from './utils/inputs';
+import Config from './config';
 import { S3CacheClient } from './utils/s3';
 import { CacheUtils } from './utils/cache';
 import { CacheError, S3Error } from './types';
@@ -11,48 +11,43 @@ export async function run(): Promise<void> {
   try {
     core.info('S3 Cache Action - Restore phase starting');
 
-    // Add debug information
-    core.debug('Reading action inputs...');
-    const inputs = getInputs();
-
-    core.debug('Getting GitHub context...');
-    const { repository, ref } = CacheUtils.getGitHubContext();
-
-    core.info(`Looking for cache with key: ${inputs.key}`);
+    const config = new Config();
+    core.info(`Looking for cache with key: ${config.input.key}`);
 
     // Initialize S3 client
     const s3Client = new S3CacheClient(
       {
-        region: inputs.awsRegion,
+        region: config.input.awsRegion,
         credentials: {
-          accessKeyId: inputs.awsAccessKeyId,
-          secretAccessKey: inputs.awsSecretAccessKey
+          accessKeyId: config.input.awsAccessKeyId,
+          secretAccessKey: config.input.awsSecretAccessKey
         }
       },
-      inputs.s3Bucket
+      config.input.s3Bucket
     );
 
     // Try exact key match first
-    const exactKey = S3CacheClient.generateCacheKey(inputs.s3Prefix, repository, ref, inputs.key);
-    CacheUtils.logCacheInfo('restore', inputs.key, inputs.s3Bucket, exactKey);
+    const exactKey = config.generateS3Key();
+    CacheUtils.logCacheInfo('restore', config.input.key, config.input.s3Bucket, exactKey);
 
     if (await s3Client.objectExists(exactKey)) {
-      core.info(`Cache hit found for exact key: ${inputs.key}`);
-      await restoreCache(s3Client, exactKey, inputs.key);
+      core.info(`Cache hit found for exact key: ${config.input.key}`);
+      await restoreCache(s3Client, exactKey, config.input.key, config);
       return;
     }
 
     // Try restore keys if provided
-    if (inputs.restoreKeys && inputs.restoreKeys.length > 0) {
+    if (config.parsedInputs.restoreKeys && config.parsedInputs.restoreKeys.length > 0) {
       core.info('Exact key not found, trying restore keys');
 
-      for (const restoreKey of inputs.restoreKeys) {
-        const restoreS3Key = S3CacheClient.generateCacheKey(inputs.s3Prefix, repository, ref, restoreKey);
+      for (const restoreKey of config.parsedInputs.restoreKeys) {
+        const repoName = config.githubContext.repository.split('/').pop() || config.githubContext.repository;
+        const restoreS3Key = `${config.input.s3Prefix}/${repoName}/${config.githubContext.ref}/${restoreKey}.tar.gz`;
         core.info(`Trying restore key: ${restoreKey}`);
 
         if (await s3Client.objectExists(restoreS3Key)) {
           core.info(`Cache hit found for restore key: ${restoreKey}`);
-          await restoreCache(s3Client, restoreS3Key, restoreKey);
+          await restoreCache(s3Client, restoreS3Key, restoreKey, config);
           return;
         }
       }
@@ -60,9 +55,9 @@ export async function run(): Promise<void> {
 
     // No cache found
     core.info('Cache not found');
-    CacheUtils.setOutputs(false, inputs.key, '');
+    CacheUtils.setOutputs(false, config.input.key, '');
 
-    if (inputs.failOnCacheMiss) {
+    if (config.input.failOnCacheMiss) {
       throw new CacheError('Cache miss and fail-on-cache-miss is enabled');
     }
 
@@ -78,7 +73,7 @@ export async function run(): Promise<void> {
 /**
  * Download and extract cache from S3
  */
-async function restoreCache(s3Client: S3CacheClient, s3Key: string, matchedKey: string): Promise<void> {
+async function restoreCache(s3Client: S3CacheClient, s3Key: string, matchedKey: string, config: Config): Promise<void> {
   const archivePath = 'cache.tar.gz';
 
   try {
@@ -90,8 +85,7 @@ async function restoreCache(s3Client: S3CacheClient, s3Key: string, matchedKey: 
     await CacheUtils.extractArchive(archivePath);
 
     // Set outputs
-    const inputs = getInputs();
-    CacheUtils.setOutputs(true, inputs.key, matchedKey);
+    CacheUtils.setOutputs(true, config.input.key, matchedKey);
 
     core.info('Cache restored successfully');
 

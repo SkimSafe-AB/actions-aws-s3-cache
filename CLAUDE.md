@@ -145,3 +145,4 @@ When adding new features:
 - Source maps available in dist/ for debugging compiled code
 - Set `ACTIONS_STEP_DEBUG=true` for verbose GitHub Actions logging
 - always ensure that all functions are covered by testing, also add a changelog to ensure that its easy to pick up where you left.
+- always ensure test runs with no failures.
