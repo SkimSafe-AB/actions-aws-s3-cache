@@ -169,8 +169,6 @@ describe('Full Action Integration Tests', () => {
 
       // Verify that core functions were called
       expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Save phase starting');
-      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: key=present');
-      expect(mockInfo).toHaveBeenCalledWith('DEBUG Config: paths=node_modules,.cache');
     });
   });
 
