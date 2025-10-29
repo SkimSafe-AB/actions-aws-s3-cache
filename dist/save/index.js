@@ -60413,36 +60413,36 @@ class S3CacheClient {
      */
     async downloadObject(key, localPath) {
         try {
-            const command = new client_s3_1.GetObjectCommand({
+            const headObjectResponse = await this.client.send(new client_s3_1.HeadObjectCommand({
                 Bucket: this.bucket,
                 Key: key
-            });
-            const response = await this.client.send(command);
-            if (!response.Body) {
-                throw new types_1.S3Error('Empty response body from S3');
+            }));
+            const contentLength = headObjectResponse.ContentLength;
+            if (!contentLength) {
+                throw new types_1.S3Error('Could not determine content length for multipart download');
             }
-            const writeStream = fs.createWriteStream(localPath);
-            // Convert the readable stream to bytes and write to file
-            if (response.Body) {
-                const chunks = [];
-                // Handle the async iterable response body
-                for await (const chunk of response.Body) {
-                    chunks.push(chunk);
-                }
-                const buffer = Buffer.concat(chunks);
-                return new Promise((resolve, reject) => {
-                    writeStream.write(buffer, (error) => {
-                        if (error) {
-                            reject(error);
-                        }
-                        else {
-                            writeStream.end();
-                            writeStream.on('finish', resolve);
-                            writeStream.on('error', reject);
-                        }
-                    });
-                });
+            const partSize = 1024 * 1024 * 5; // 5MB parts
+            const numParts = Math.ceil(contentLength / partSize);
+            const downloadPromises = [];
+            const fileHandle = await fs.promises.open(localPath, 'w');
+            for (let i = 0; i < numParts; i++) {
+                const start = i * partSize;
+                const end = Math.min(start + partSize - 1, contentLength - 1);
+                const range = `bytes=${start}-${end}`;
+                downloadPromises.push(this.client.send(new client_s3_1.GetObjectCommand({
+                    Bucket: this.bucket,
+                    Key: key,
+                    Range: range
+                })).then(async (response) => {
+                    if (!response.Body) {
+                        throw new types_1.S3Error(`Empty response body for part ${i}`);
+                    }
+                    const buffer = Buffer.from(await response.Body.transformToByteArray());
+                    await fileHandle.write(buffer, 0, buffer.length, start);
+                }));
             }
+            await Promise.all(downloadPromises);
+            await fileHandle.close();
         }
         catch (error) {
             throw new types_1.S3Error(`Failed to download object: ${error.message}`, error.name);

@@ -5,8 +5,10 @@ jest.mock('fs', () => ({
   createWriteStream: jest.fn(),
   statSync: jest.fn(),
   promises: {
+    ...jest.requireActual('fs').promises,
     access: jest.fn(),
-    stat: jest.fn()
+    stat: jest.fn(),
+    open: jest.fn()
   }
 }));
 
@@ -110,37 +112,63 @@ describe('S3CacheClient', () => {
 
   describe('downloadObject', () => {
     it('should download object to local file', async () => {
-      const mockWriteStream = {
-        write: jest.fn().mockImplementation((buffer, callback) => callback()),
-        end: jest.fn(),
-        on: jest.fn().mockImplementation((event, callback) => {
-          if (event === 'finish') {
-            setTimeout(callback, 0);
-          }
-        })
-      };
-
-      mockCreateWriteStream.mockReturnValue(mockWriteStream as any);
-
       const mockBody = {
-        async *[Symbol.asyncIterator]() {
-          yield new Uint8Array([1, 2, 3, 4]);
-        }
+        transformToByteArray: jest.fn().mockResolvedValue(new Uint8Array([1, 2, 3, 4]))
       };
 
-      mockSend.mockResolvedValue({ Body: mockBody });
+      mockSend.mockImplementation((command) => {
+        if (command instanceof HeadObjectCommand) {
+          return Promise.resolve({ ContentLength: 100 });
+        } else if (command instanceof GetObjectCommand) {
+          return Promise.resolve({ Body: mockBody });
+        }
+        return Promise.resolve({});
+      });
+
+      // Mock fs.promises.open and fileHandle.write
+      const mockFileHandle = {
+        write: jest.fn().mockResolvedValue({}),
+        close: jest.fn().mockResolvedValue({})
+      };
+      jest.spyOn(fs.promises, 'open').mockResolvedValue(mockFileHandle as any);
 
       await s3Client.downloadObject('test-key', 'local-file.tar.gz');
 
-      expect(GetObjectCommand).toHaveBeenCalledWith({
+      expect(HeadObjectCommand).toHaveBeenCalledWith({
         Bucket: 'test-bucket',
         Key: 'test-key'
       });
-      expect(mockCreateWriteStream).toHaveBeenCalledWith('local-file.tar.gz');
+      expect(GetObjectCommand).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Key: 'test-key',
+        Range: 'bytes=0-99'
+      });
+      expect(fs.promises.open).toHaveBeenCalledWith('local-file.tar.gz', 'w');
+      expect(mockFileHandle.write).toHaveBeenCalled();
+      expect(mockFileHandle.close).toHaveBeenCalled();
     });
 
-    it('should throw error when response body is empty', async () => {
-      mockSend.mockResolvedValue({ Body: null });
+    it('should throw error when content length is not determined', async () => {
+      mockSend.mockImplementation((command) => {
+        if (command instanceof HeadObjectCommand) {
+          return Promise.resolve({ ContentLength: undefined });
+        }
+        return Promise.resolve({});
+      });
+
+      await expect(s3Client.downloadObject('test-key', 'local-file.tar.gz'))
+        .rejects.toThrow(S3Error);
+    });
+
+    it('should throw error when response body is empty for a part', async () => {
+      mockSend.mockImplementation((command) => {
+        if (command instanceof HeadObjectCommand) {
+          return Promise.resolve({ ContentLength: 100 });
+        } else if (command instanceof GetObjectCommand) {
+          return Promise.resolve({ Body: null });
+        }
+        return Promise.resolve({});
+      });
 
       await expect(s3Client.downloadObject('test-key', 'local-file.tar.gz'))
         .rejects.toThrow(S3Error);
