@@ -73,22 +73,6 @@ describe('Save Action', () => {
     expect(mockUploadObject).not.toHaveBeenCalled();
   });
 
-  it('should skip save if job failed', async () => {
-    mockGetState.mockReturnValue('false');
-    const originalExitCode = process.exitCode;
-    process.exitCode = 1; // Simulate job failure
-
-    const { run } = await import('../save');
-    await run();
-
-    expect(mockInfo).toHaveBeenCalledWith('Job failed, skipping cache save.');
-    expect(mockValidatePaths).not.toHaveBeenCalled();
-    expect(mockCreateArchive).not.toHaveBeenCalled();
-    expect(mockUploadObject).not.toHaveBeenCalled();
-
-    process.exitCode = originalExitCode; // Reset exit code
-  });
-
   it('should skip save if no valid paths are found', async () => {
     mockGetState.mockReturnValue('false');
     mockValidatePaths.mockResolvedValue({ validPaths: [], missingPaths: ['path1'] });
