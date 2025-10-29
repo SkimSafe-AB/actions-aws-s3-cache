@@ -60003,7 +60003,11 @@ async function run() {
             return;
         }
         core.info('S3 Cache Action - Save phase starting');
-        core.info(`Environment variables: ${JSON.stringify(process.env, null, 2)}`);
+        // Check if the job failed
+        if (process.exitCode !== 0) {
+            core.info('Job failed, skipping cache save.');
+            return;
+        }
         const config = new config_1.default();
         core.info(`Saving cache with key: ${config.input.key}`);
         // Validate that paths exist
