@@ -59872,30 +59872,17 @@ const github = __importStar(__nccwpck_require__(4903));
 const types_1 = __nccwpck_require__(3244);
 class Config {
     constructor() {
-        // Get inputs using a reliable method that works in composite actions
-        const getInput = (name, required = false) => {
-            const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
-            const value = (process.env[envName] || '').trim();
-            if (required && !value) {
-                throw new types_1.CacheError(`The '${name}' input is not specified`);
-            }
-            return value;
-        };
-        const getBooleanInput = (name) => {
-            const envName = `INPUT_${name.toUpperCase().replace(/-/g, '_')}`;
-            return process.env[envName] === 'true';
-        };
         this.input = {
-            key: getInput('key', true),
-            path: getInput('path', true),
-            restoreKeys: getInput('restore-keys'),
-            awsAccessKeyId: getInput('aws-access-key-id', true),
-            awsSecretAccessKey: getInput('aws-secret-access-key', true),
-            awsRegion: getInput('aws-region', true),
-            s3Bucket: getInput('s3-bucket', true),
-            s3Prefix: getInput('s3-prefix') || 'github-actions-cache',
-            compressionLevel: getInput('compression-level') || '6',
-            failOnCacheMiss: getBooleanInput('fail-on-cache-miss')
+            key: core.getInput('key', { required: true, trimWhitespace: true }),
+            path: core.getInput('path', { required: true, trimWhitespace: true }),
+            restoreKeys: core.getInput('restore-keys', { trimWhitespace: true }),
+            awsAccessKeyId: core.getInput('aws-access-key-id', { required: true, trimWhitespace: true }),
+            awsSecretAccessKey: core.getInput('aws-secret-access-key', { required: true, trimWhitespace: true }),
+            awsRegion: core.getInput('aws-region', { required: true, trimWhitespace: true }),
+            s3Bucket: core.getInput('s3-bucket', { required: true, trimWhitespace: true }),
+            s3Prefix: core.getInput('s3-prefix', { trimWhitespace: true }) || 'github-actions-cache',
+            compressionLevel: core.getInput('compression-level', { trimWhitespace: true }) || '6',
+            failOnCacheMiss: core.getBooleanInput('fail-on-cache-miss')
         };
         // Get GitHub context
         this.githubContext = {
