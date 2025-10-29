@@ -93,6 +93,19 @@ describe('Save Action', () => {
     expect(mockUploadObject).not.toHaveBeenCalled();
   });
 
+  it('should skip save if job status is unknown', async () => {
+    mockGetState.mockReturnValue('false');
+    mockGetJobStatus.mockResolvedValue('unknown');
+
+    const { run } = await import('../save');
+    await run();
+
+    expect(mockInfo).toHaveBeenCalledWith('Job status is \'unknown\', skipping cache save.');
+    expect(mockValidatePaths).not.toHaveBeenCalled();
+    expect(mockCreateArchive).not.toHaveBeenCalled();
+    expect(mockUploadObject).not.toHaveBeenCalled();
+  });
+
   it('should skip save if no valid paths are found', async () => {
     mockGetState.mockReturnValue('false');
     mockValidatePaths.mockResolvedValue({ validPaths: [], missingPaths: ['path1'] });

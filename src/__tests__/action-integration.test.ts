@@ -179,7 +179,7 @@ describe('Full Action Integration Tests', () => {
     });
 
     it('should skip save if job fails', async () => {
-      mockGetJobStatus.mockResolvedValue('failure');
+      mockGetJobStatus.mockResolvedValue('unknown');
 
       const environment = {
         INPUT_KEY: 'test-cache-key',
@@ -219,7 +219,7 @@ describe('Full Action Integration Tests', () => {
       await runSave();
 
       expect(mockInfo).toHaveBeenCalledWith('S3 Cache Action - Save phase starting');
-      expect(mockInfo).toHaveBeenCalledWith('Job status is \'failure\', skipping cache save.');
+      expect(mockInfo).toHaveBeenCalledWith('Job status is \'unknown\', skipping cache save.');
       expect(mockInfo).not.toHaveBeenCalledWith('DEBUG Config: key=present');
       expect(mockInfo).not.toHaveBeenCalledWith('DEBUG Config: paths=node_modules,.cache');
     });

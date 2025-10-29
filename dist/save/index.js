@@ -60392,47 +60392,50 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getJobStatus = getJobStatus;
 const core = __importStar(__nccwpck_require__(6966));
 async function getJobStatus(githubToken) {
-    const token = githubToken;
+    // First check process exit code - most reliable indicator
+    if (process.exitCode && process.exitCode !== 0) {
+        core.info(`Process exit code is ${process.exitCode}, indicating job failure.`);
+        return 'failure';
+    }
+    const token = githubToken || process.env.ACTIONS_RUNTIME_TOKEN;
     const githubApiUrl = process.env.GITHUB_API_URL;
     const jobName = process.env.GITHUB_JOB;
     const runId = process.env.GITHUB_RUN_ID;
     const repository = process.env.GITHUB_REPOSITORY;
     if (!token || !githubApiUrl || !jobName || !runId || !repository) {
-        core.warning('Missing GitHub Actions environment variables or token to determine job status. Assuming success.');
-        return 'success';
+        core.warning('Missing GitHub Actions environment variables or token to determine job status. Cannot determine status reliably.');
+        return 'unknown';
     }
     const [owner, repo] = repository.split('/');
     try {
-        // GitHub API requires a specific API version header
+        // GitHub API headers
         const headers = {
             'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json;api-version=6.0-preview',
+            'Accept': 'application/vnd.github.v3+json',
             'User-Agent': 'actions/s3-cache'
         };
-        // Construct the URL to get job details
-        // This is a simplified example, the actual API might require more specific job ID
-        // For now, we'll try to list jobs and find the current one by name
         const jobsUrl = `${githubApiUrl}/repos/${owner}/${repo}/actions/runs/${runId}/jobs`;
-        core.info(`Querying GitHub API for job status: ${jobsUrl}`);
+        core.debug(`Querying GitHub API for job status: ${jobsUrl}`);
         const response = await fetch(jobsUrl, { headers });
         if (!response.ok) {
-            core.warning(`Failed to query GitHub API for job status: ${response.status} - ${response.statusText}. Assuming success.`);
-            return 'success';
+            core.warning(`Failed to query GitHub API for job status: ${response.status} - ${response.statusText}. Cannot determine status reliably.`);
+            return 'unknown';
         }
         const data = await response.json();
-        const currentJob = data.value.find((job) => job.name === jobName);
+        const currentJob = data.jobs?.find((job) => job.name === jobName);
         if (currentJob) {
-            core.info(`Current job status: ${currentJob.status}`);
-            return currentJob.status;
+            const status = currentJob.conclusion || currentJob.status;
+            core.info(`Current job status from API: ${status}`);
+            return status;
         }
         else {
-            core.warning(`Could not find current job ('${jobName}') in API response. Assuming success.`);
-            return 'success';
+            core.warning(`Could not find current job ('${jobName}') in API response. Cannot determine status reliably.`);
+            return 'unknown';
         }
     }
     catch (error) {
-        core.warning(`Error querying GitHub API for job status: ${error.message}. Assuming success.`);
-        return 'success';
+        core.warning(`Error querying GitHub API for job status: ${error.message}. Cannot determine status reliably.`);
+        return 'unknown';
     }
 }
 

@@ -24,7 +24,7 @@ describe('getJobStatus', () => {
     process.env = originalEnv;
   });
 
-  it('should return "success" if all environment variables are missing', async () => {
+  it('should return "unknown" if all environment variables are missing', async () => {
     process.env.ACTIONS_RUNTIME_TOKEN = '';
     process.env.ACTIONS_RUNTIME_URL = '';
     process.env.GITHUB_JOB = '';
@@ -32,17 +32,17 @@ describe('getJobStatus', () => {
     process.env.GITHUB_REPOSITORY = '';
 
     const status = await getJobStatus('');
-    expect(status).toBe('success');
-    expect(core.warning).toHaveBeenCalledWith('Missing GitHub Actions environment variables or token to determine job status. Assuming success.');
+    expect(status).toBe('unknown');
+    expect(core.warning).toHaveBeenCalledWith('Missing GitHub Actions environment variables or token to determine job status. Cannot determine status reliably.');
   });
 
   it('should return job status from GitHub API', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        value: [
-          { name: 'other-job', status: 'success' },
-          { name: 'test-job', status: 'failure' },
+        jobs: [
+          { name: 'other-job', status: 'completed', conclusion: 'success' },
+          { name: 'test-job', status: 'completed', conclusion: 'failure' },
         ],
       }),
     });
@@ -54,14 +54,14 @@ describe('getJobStatus', () => {
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer test-token',
-          Accept: 'application/json;api-version=6.0-preview',
+          Accept: 'application/vnd.github.v3+json',
           'User-Agent': 'actions/s3-cache'
         }),
       })
     );
   });
 
-  it('should return "success" if API call fails', async () => {
+  it('should return "unknown" if API call fails', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 404,
@@ -69,30 +69,42 @@ describe('getJobStatus', () => {
     });
 
     const status = await getJobStatus('test-token');
-    expect(status).toBe('success');
+    expect(status).toBe('unknown');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Failed to query GitHub API for job status'));
   });
 
-  it('should return "success" if current job is not found in API response', async () => {
+  it('should return "unknown" if current job is not found in API response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        value: [
-          { name: 'other-job', status: 'success' },
+        jobs: [
+          { name: 'other-job', status: 'completed', conclusion: 'success' },
         ],
       }),
     });
 
     const status = await getJobStatus('test-token');
-    expect(status).toBe('success');
+    expect(status).toBe('unknown');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Could not find current job'));
   });
 
-  it('should return "success" if an error occurs during API call', async () => {
+  it('should return "unknown" if an error occurs during API call', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
     const status = await getJobStatus('test-token');
-    expect(status).toBe('success');
+    expect(status).toBe('unknown');
     expect(core.warning).toHaveBeenCalledWith(expect.stringContaining('Error querying GitHub API for job status'));
+  });
+
+  it('should return "failure" if process exit code is non-zero', async () => {
+    const originalExitCode = process.exitCode;
+    process.exitCode = 1;
+
+    const status = await getJobStatus('test-token');
+    expect(status).toBe('failure');
+    expect(core.info).toHaveBeenCalledWith('Process exit code is 1, indicating job failure.');
+
+    // Restore original exit code
+    process.exitCode = originalExitCode;
   });
 });
