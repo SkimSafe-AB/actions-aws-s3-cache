@@ -60045,7 +60045,8 @@ async function run() {
  * Create archive and upload to S3
  */
 async function saveCache(s3Client, s3Key, paths, compressionLevel, compressionMethod, repository, ref, cacheKey) {
-    const archivePath = `cache.${compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz'}`;
+    // Use S3 key basename as local filename to prevent conflicts with concurrent cache operations
+    const archivePath = cache_1.CacheUtils.getLocalArchivePath(s3Key);
     try {
         // Create cache archive
         await cache_1.CacheUtils.createArchive(paths, archivePath, compressionLevel, compressionMethod);
@@ -60145,8 +60146,17 @@ const core = __importStar(__nccwpck_require__(6966));
 const exec = __importStar(__nccwpck_require__(2851));
 const io = __importStar(__nccwpck_require__(378));
 const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
 const types_1 = __nccwpck_require__(3244);
 class CacheUtils {
+    /**
+     * Generate a safe local archive path from an S3 key
+     * Uses the S3 key basename to prevent conflicts when multiple cache operations run concurrently
+     */
+    static getLocalArchivePath(s3Key) {
+        // Extract the basename from the S3 key (e.g., "cache-key.tar.gz" from "prefix/repo/branch/cache-key.tar.gz")
+        return path.basename(s3Key);
+    }
     /**
      * Check if all specified paths exist
      */
@@ -60285,8 +60295,12 @@ class CacheUtils {
             }
             await exec.exec('tar', tarArgs);
             core.info('Cache archive extracted successfully');
+            // Clean up intermediate tar file
+            await CacheUtils.cleanup([tarPath]);
         }
         catch (error) {
+            // Ensure cleanup happens even if extraction fails
+            await CacheUtils.cleanup([tarPath]);
             throw new types_1.CacheError(`Failed to extract archive: ${error.message}`);
         }
     }

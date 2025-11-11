@@ -74,7 +74,8 @@ export async function run(): Promise<void> {
  * Download and extract cache from S3
  */
 async function restoreCache(s3Client: S3CacheClient, s3Key: string, matchedKey: string, config: Config): Promise<void> {
-  const archivePath = `cache.${config.parsedInputs.compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz'}`;
+  // Use S3 key basename as local filename to prevent conflicts with concurrent cache operations
+  const archivePath = CacheUtils.getLocalArchivePath(s3Key);
 
   try {
     // Download cache archive

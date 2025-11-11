@@ -8,18 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Cache Filename Conflicts**: Fixed issue where multiple concurrent cache operations would conflict by using the same hardcoded archive filename
+  - Changed from hardcoded `cache.tar.gz`/`cache.tar.zst` to using the S3 key basename as the local archive filename
+  - This prevents the error: `zstd: cache.tar.zst.tar already exists; overwrite (y/n)?` when running multiple cache restore/save operations in parallel
+  - Example: Cache key `MAIN 3.X DEV-root-composer-cache-Linux-ARM64-hash` now uses `MAIN 3.X DEV-root-composer-cache-Linux-ARM64-hash.tar.zst` as the local filename instead of `cache.tar.zst`
+
 - **Cache Cleanup**: Fixed cleanup of intermediate `.tar` file after zstd cache extraction
   - The `extractZstdArchive` function now properly removes the `cache.tar.zst.tar` file after extraction
   - Cleanup is guaranteed even if extraction fails (using try-finally pattern)
   - Added comprehensive tests to verify cleanup behavior in both success and failure scenarios
 
 ### Technical Details
-- Modified `src/utils/cache.ts:extractZstdArchive()` to call `CacheUtils.cleanup()` after tar extraction
-- Added try-finally block to ensure cleanup happens even on extraction errors
-- Added three new test cases in `src/__tests__/cache.test.ts` to cover:
-  - Successful extraction with cleanup
-  - Extraction to custom directory with cleanup
-  - Cleanup on extraction failure
+- **Concurrent Cache Fix**:
+  - Added `CacheUtils.getLocalArchivePath(s3Key)` in `src/utils/cache.ts:14-17` to extract basename from S3 keys
+  - Modified `src/restore.ts:78` to use `CacheUtils.getLocalArchivePath(s3Key)` instead of hardcoded filename
+  - Modified `src/save.ts:83` to use `CacheUtils.getLocalArchivePath(s3Key)` instead of hardcoded filename
+  - Each cache operation now uses a unique filename based on its cache key, preventing conflicts
+
+- **Cleanup Fix**:
+  - Modified `src/utils/cache.ts:extractZstdArchive()` to call `CacheUtils.cleanup()` after tar extraction
+  - Added try-finally block to ensure cleanup happens even on extraction errors
+  - Added three new test cases in `src/__tests__/cache.test.ts` to cover cleanup scenarios
 
 ## [1.0.1] - 2025-10-29
 

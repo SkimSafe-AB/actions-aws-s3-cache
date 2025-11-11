@@ -79,7 +79,8 @@ async function saveCache(
   ref: string,
   cacheKey: string
 ): Promise<void> {
-  const archivePath = `cache.${compressionMethod === 'zstd' ? 'tar.zst' : 'tar.gz'}`;
+  // Use S3 key basename as local filename to prevent conflicts with concurrent cache operations
+  const archivePath = CacheUtils.getLocalArchivePath(s3Key);
 
   try {
     // Create cache archive

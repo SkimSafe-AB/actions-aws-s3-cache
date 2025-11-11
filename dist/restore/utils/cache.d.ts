@@ -1,5 +1,10 @@
 export declare class CacheUtils {
     /**
+     * Generate a safe local archive path from an S3 key
+     * Uses the S3 key basename to prevent conflicts when multiple cache operations run concurrently
+     */
+    static getLocalArchivePath(s3Key: string): string;
+    /**
      * Check if all specified paths exist
      */
     static validatePaths(paths: string[]): Promise<{

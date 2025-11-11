@@ -13,6 +13,30 @@ describe('CacheUtils', () => {
     jest.clearAllMocks();
   });
 
+  describe('getLocalArchivePath', () => {
+    it('should extract basename from S3 key', () => {
+      const s3Key = 'github-actions-cache/repo/branch/my-cache-key.tar.gz';
+      const localPath = CacheUtils.getLocalArchivePath(s3Key);
+
+      expect(localPath).toEqual('my-cache-key.tar.gz');
+    });
+
+    it('should handle different file extensions', () => {
+      const s3KeyZst = 'prefix/repo/branch/cache.tar.zst';
+      const s3KeyGz = 'prefix/repo/branch/cache.tar.gz';
+
+      expect(CacheUtils.getLocalArchivePath(s3KeyZst)).toEqual('cache.tar.zst');
+      expect(CacheUtils.getLocalArchivePath(s3KeyGz)).toEqual('cache.tar.gz');
+    });
+
+    it('should handle keys with special characters', () => {
+      const s3Key = 'prefix/repo/branch/MAIN 3.X DEV-root-composer-cache-Linux-ARM64-hash.tar.zst';
+      const localPath = CacheUtils.getLocalArchivePath(s3Key);
+
+      expect(localPath).toEqual('MAIN 3.X DEV-root-composer-cache-Linux-ARM64-hash.tar.zst');
+    });
+  });
+
   describe('validatePaths', () => {
     it('should separate valid and missing paths', async () => {
       mockAccess.mockImplementation(async (path) => {

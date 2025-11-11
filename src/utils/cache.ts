@@ -2,9 +2,19 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as io from '@actions/io';
 import * as fs from 'fs';
+import * as path from 'path';
+import * as crypto from 'crypto';
 import { CacheError } from '../types';
 
 export class CacheUtils {
+  /**
+   * Generate a safe local archive path from an S3 key
+   * Uses the S3 key basename to prevent conflicts when multiple cache operations run concurrently
+   */
+  static getLocalArchivePath(s3Key: string): string {
+    // Extract the basename from the S3 key (e.g., "cache-key.tar.gz" from "prefix/repo/branch/cache-key.tar.gz")
+    return path.basename(s3Key);
+  }
   /**
    * Check if all specified paths exist
    */
