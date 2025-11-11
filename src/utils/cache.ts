@@ -163,7 +163,12 @@ export class CacheUtils {
       }
       await exec.exec('tar', tarArgs);
       core.info('Cache archive extracted successfully');
+
+      // Clean up intermediate tar file
+      await CacheUtils.cleanup([tarPath]);
     } catch (error: any) {
+      // Ensure cleanup happens even if extraction fails
+      await CacheUtils.cleanup([tarPath]);
       throw new CacheError(`Failed to extract archive: ${error.message}`);
     }
   }

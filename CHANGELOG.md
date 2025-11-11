@@ -5,26 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Cache Cleanup**: Fixed cleanup of intermediate `.tar` file after zstd cache extraction
+  - The `extractZstdArchive` function now properly removes the `cache.tar.zst.tar` file after extraction
+  - Cleanup is guaranteed even if extraction fails (using try-finally pattern)
+  - Added comprehensive tests to verify cleanup behavior in both success and failure scenarios
+
+### Technical Details
+- Modified `src/utils/cache.ts:extractZstdArchive()` to call `CacheUtils.cleanup()` after tar extraction
+- Added try-finally block to ensure cleanup happens even on extraction errors
+- Added three new test cases in `src/__tests__/cache.test.ts` to cover:
+  - Successful extraction with cleanup
+  - Extraction to custom directory with cleanup
+  - Cleanup on extraction failure
+
 ## [1.0.1] - 2025-10-29
 
 ### Fixed
-- **Job Status Detection**: Fixed cache saving on failed jobs by improving job status detection
-- **GitHub API Response**: Corrected API response parsing to use `jobs` array instead of `value`
-- **Process Exit Code**: Added `process.exitCode` check as primary failure detection method
-- **Conservative Fallback**: Changed fallback behavior from "success" to "unknown" to prevent cache saving when status cannot be determined
+- **Job Status Detection**: Fixed cache saving on failed jobs using GitHub Actions' built-in `post-if: 'success()'` condition
 - **Action Definition**: Fixed `action.yml` file to remove `${{ github.token }}` example from description that was causing parsing errors
+- **Duplicate Code**: Removed duplicate Config instantiation and logging in `src/save.ts`
 
 ### Changed
-- Job status detection now returns "unknown" instead of "success" when status cannot be determined
-- Added `ACTIONS_RUNTIME_TOKEN` as fallback token source for GitHub API calls
-- Updated GitHub API headers to use standard v3 format
-- Enhanced error handling with more descriptive warnings
+- **Simplified Architecture**: Adopted the same approach as `actions/cache` using `post-if: 'success()'` instead of complex GitHub API calls
+- **Removed GitHub Token Requirement**: No longer requires `github-token` input parameter
+- **Cleaner Code**: Removed complex job status detection logic in favor of GitHub Actions' native failure handling
 
 ### Technical Details
-- Updated `getJobStatus()` function in `src/utils/github.ts`
-- Fixed duplicate Config instantiation in `src/save.ts`
-- Added comprehensive tests for new job status detection logic
-- Updated all test expectations to handle "unknown" status properly
+- Added `post-if: 'success()'` to `action.yml` to prevent cache saving on job failures
+- Removed `getJobStatus()` function and related GitHub API logic
+- Removed `github-token` input parameter from action definition
+- Simplified `src/save.ts` by removing job status checking
+- Updated tests to reflect simplified architecture
 
 ## [1.0.0] - 2024-10-29
 

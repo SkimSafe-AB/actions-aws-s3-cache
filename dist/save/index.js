@@ -60405,7 +60405,7 @@ class S3CacheClient {
             if (error?.name === 'NotFound' || error?.$metadata?.httpStatusCode === 404) {
                 return false;
             }
-            throw new types_1.S3Error(`Failed to check object existence: ${error.message}`, error.name);
+            throw new types_1.S3Error(`Failed to check object existence: ${JSON.stringify(error)}`, error.name);
         }
     }
     /**

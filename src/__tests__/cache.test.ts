@@ -114,6 +114,73 @@ describe('CacheUtils', () => {
     });
   });
 
+  describe('extractZstdArchive', () => {
+    it('should extract zstd archive and cleanup intermediate tar file', async () => {
+      mockExec.mockResolvedValue(0);
+      mockAccess.mockResolvedValue(undefined);
+
+      const mockRmRF = require('@actions/io').rmRF as jest.MockedFunction<any>;
+      mockRmRF.mockResolvedValue(undefined);
+
+      await CacheUtils.extractZstdArchive('archive.tar.zst', undefined);
+
+      // Verify zstd decompression
+      expect(mockExec).toHaveBeenCalledWith('zstd', [
+        '-d',
+        '--rm',
+        '-o',
+        'archive.tar.zst.tar',
+        'archive.tar.zst'
+      ]);
+
+      // Verify tar extraction
+      expect(mockExec).toHaveBeenCalledWith('tar', ['-xf', 'archive.tar.zst.tar']);
+
+      // Verify cleanup of intermediate tar file
+      expect(mockRmRF).toHaveBeenCalledWith('archive.tar.zst.tar');
+    });
+
+    it('should extract zstd archive to specified directory and cleanup', async () => {
+      mockExec.mockResolvedValue(0);
+      mockAccess.mockResolvedValue(undefined);
+
+      const mockRmRF = require('@actions/io').rmRF as jest.MockedFunction<any>;
+      mockRmRF.mockResolvedValue(undefined);
+
+      await CacheUtils.extractZstdArchive('archive.tar.zst', '/target/dir');
+
+      // Verify tar extraction with directory
+      expect(mockExec).toHaveBeenCalledWith('tar', [
+        '-xf',
+        'archive.tar.zst.tar',
+        '-C',
+        '/target/dir'
+      ]);
+
+      // Verify cleanup
+      expect(mockRmRF).toHaveBeenCalledWith('archive.tar.zst.tar');
+    });
+
+    it('should cleanup intermediate tar file even if extraction fails', async () => {
+      mockExec.mockImplementation(async (cmd) => {
+        if (cmd === 'tar') {
+          throw new Error('Extraction failed');
+        }
+        return 0;
+      });
+      mockAccess.mockResolvedValue(undefined);
+
+      const mockRmRF = require('@actions/io').rmRF as jest.MockedFunction<any>;
+      mockRmRF.mockResolvedValue(undefined);
+
+      await expect(CacheUtils.extractZstdArchive('archive.tar.zst', undefined))
+        .rejects.toThrow('Failed to extract archive: Extraction failed');
+
+      // Verify cleanup was still called
+      expect(mockRmRF).toHaveBeenCalledWith('archive.tar.zst.tar');
+    });
+  });
+
   describe('getGitHubContext', () => {
     it('should return GitHub context from environment variables', () => {
       process.env.GITHUB_REPOSITORY = 'owner/repo';
